@@ -35,6 +35,7 @@ import { AppTitle } from "../src/components/auth/AppTitle";
 import { NotificationService } from "../src/services/NotificationService";
 import * as Notifications from 'expo-notifications';
 
+
 const queryClient = new QueryClient();
 
 function ApiToastBridge() {
