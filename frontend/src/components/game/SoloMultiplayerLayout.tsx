@@ -103,128 +103,49 @@ export function SoloMultiplayerLayout({
             gap: 20,
           }}
         >
-          {isSoloMode ? (
-            <>
-              <View style={{ alignItems: "center", gap: 4 }}>
-                <Text
-                  style={{
-                    color: "#7B6B8A",
-                    fontSize: 10,
-                    fontFamily: "LuckiestGuy_400Regular",
-                    letterSpacing: 1,
-                  }}
-                >
-                  {t("game:roundLabel", {
-                    current: currentRound,
-                    max: maxRounds,
-                  })}
-                </Text>
-                <TimerBar timeRemaining={timeRemaining} maxTime={30} />
-              </View>
-              <View style={{ alignItems: "center", minWidth: 50 }}>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.4)",
-                    fontSize: 10,
-                    fontFamily: FONTS.bodyExtraBold,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {t("game:scoreboard.score")}
-                </Text>
-                <View style={{ position: "relative" }}>
-                  {scorePopKey.left > 0 && (
-                    <ScorePop key={`left-${scorePopKey.left}`} side="left" />
-                  )}
-                  <Text
-                    style={{
-                      color: "#ffffff",
-                      fontSize: 24,
-                      fontFamily: FONTS.bodyExtraBold,
-                    }}
-                  >
-                    {teamScores.left}
-                  </Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={{ alignItems: "center", minWidth: 40 }}>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.4)",
-                    fontSize: 10,
-                    fontFamily: FONTS.bodyExtraBold,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {t("common:teams.red")}
-                </Text>
-                <View style={{ position: "relative" }}>
-                  {scorePopKey.left > 0 && (
-                    <ScorePop key={`left-${scorePopKey.left}`} side="left" />
-                  )}
-                  <Text
-                    style={{
-                      color: "#ffffff",
-                      fontSize: 24,
-                      fontFamily: FONTS.bodyExtraBold,
-                    }}
-                  >
-                    {teamScores.left}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ alignItems: "center", gap: 4 }}>
-                <Text
-                  style={{
-                    color: "#7B6B8A",
-                    fontSize: 10,
-                    fontFamily: "LuckiestGuy_400Regular",
-                    letterSpacing: 1,
-                  }}
-                >
-                  {t("game:roundLabel", {
-                    current: currentRound,
-                    max: maxRounds,
-                  })}
-                </Text>
-                <TimerBar timeRemaining={timeRemaining} maxTime={30} />
-              </View>
-
-              <View style={{ alignItems: "center", minWidth: 40 }}>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.4)",
-                    fontSize: 10,
-                    fontFamily: FONTS.bodyExtraBold,
-                    letterSpacing: 2,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {t("common:teams.blue")}
-                </Text>
-                <View style={{ position: "relative" }}>
-                  {scorePopKey.right > 0 && (
-                    <ScorePop key={`right-${scorePopKey.right}`} side="right" />
-                  )}
-                  <Text
-                    style={{
-                      color: "#ffffff",
-                      fontSize: 24,
-                      fontFamily: FONTS.bodyExtraBold,
-                    }}
-                  >
-                    {teamScores.right}
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
+          <View style={{ alignItems: "center", gap: 4 }}>
+            <Text
+              style={{
+                color: "#7B6B8A",
+                fontSize: 10,
+                fontFamily: "LuckiestGuy_400Regular",
+                letterSpacing: 1,
+              }}
+            >
+              {t("game:roundLabel", {
+                current: currentRound,
+                max: maxRounds,
+              })}
+            </Text>
+            <TimerBar timeRemaining={timeRemaining} maxTime={30} />
+          </View>
+          <View style={{ alignItems: "center", minWidth: 50 }}>
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.4)",
+                fontSize: 10,
+                fontFamily: FONTS.bodyExtraBold,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+              }}
+            >
+              {t("game:scoreboard.score")}
+            </Text>
+            <View style={{ position: "relative" }}>
+              {scorePopKey.left > 0 && (
+                <ScorePop key={`left-${scorePopKey.left}`} side="left" />
+              )}
+              <Text
+                style={{
+                  color: "#ffffff",
+                  fontSize: 24,
+                  fontFamily: FONTS.bodyExtraBold,
+                }}
+              >
+                {teamScores.left}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 

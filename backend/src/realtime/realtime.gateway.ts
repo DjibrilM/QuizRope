@@ -11,7 +11,6 @@ import {
 import { Logger, Inject, forwardRef } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { MatchService } from "../match/match.service";
 import { ChildrenService } from "../children/children.service";
 import { HomeworkService } from "../homework/homework.service";
 import { GEMINI_MODEL } from "../constants";
@@ -32,16 +31,10 @@ export class RealtimeGateway
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(RealtimeGateway.name);
 
-  // Track players per match and timers
-  private matchPlayers = new Map<string, Set<string>>();
-  private playerSockets = new Map<string, string>(); // socketId -> matchId
-  private matchTimers = new Map<string, NodeJS.Timeout>();
-  private readyPlayers = new Map<string, Set<string>>();
-  // Active AI streams — aborted when client emits homework:stop
+  // Active AI streams — aborted when client emits homework:stop or disconnects
   private activeStreams = new Map<string, AbortController>();
 
   constructor(
-    private matchService: MatchService,
     @Inject(forwardRef(() => ChildrenService))
     private childrenService: ChildrenService,
     private homeworkService: HomeworkService,
@@ -56,164 +49,10 @@ export class RealtimeGateway
   }
 
   handleDisconnect(client: Socket) {
-    const matchId = this.playerSockets.get(client.id);
-    if (matchId) {
-      const players = this.matchPlayers.get(matchId);
-      if (players) {
-        players.delete(client.id);
-        this.server.to(matchId).emit("lobby:update", {
-          matchId,
-          playerCount: players.size,
-        });
-      }
-      this.playerSockets.delete(client.id);
-    }
     // Abort any active AI stream for this client
     this.activeStreams.get(client.id)?.abort();
     this.activeStreams.delete(client.id);
     this.logger.log(`Client disconnected: ${client.id}`);
-  }
-
-  @SubscribeMessage("match:join")
-  handleJoinMatch(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    data: { matchId: string; playerId: string; teamSide: string },
-  ) {
-    const { matchId, playerId, teamSide } = data;
-    client.join(matchId);
-    this.playerSockets.set(client.id, matchId);
-
-    if (!this.matchPlayers.has(matchId)) {
-      this.matchPlayers.set(matchId, new Set());
-    }
-    this.matchPlayers.get(matchId)!.add(client.id);
-
-    this.server.to(matchId).emit("lobby:update", {
-      matchId,
-      playerCount: this.matchPlayers.get(matchId)!.size,
-      newPlayer: { playerId, teamSide },
-    });
-
-    this.logger.log(`Player ${playerId} joined match ${matchId}`);
-  }
-
-  @SubscribeMessage("match:leave")
-  handleLeaveMatch(@ConnectedSocket() client: Socket) {
-    const matchId = this.playerSockets.get(client.id);
-    if (matchId) {
-      client.leave(matchId);
-      const players = this.matchPlayers.get(matchId);
-      if (players) players.delete(client.id);
-      this.playerSockets.delete(client.id);
-
-      this.server.to(matchId).emit("lobby:update", {
-        matchId,
-        playerCount: players?.size || 0,
-      });
-    }
-  }
-
-  @SubscribeMessage("player:ready")
-  handlePlayerReady(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { matchId: string; playerId: string },
-  ) {
-    if (!this.readyPlayers.has(data.matchId)) {
-      this.readyPlayers.set(data.matchId, new Set());
-    }
-    this.readyPlayers.get(data.matchId)!.add(data.playerId);
-
-    this.server.to(data.matchId).emit("lobby:update", {
-      matchId: data.matchId,
-      readyCount: this.readyPlayers.get(data.matchId)!.size,
-    });
-  }
-
-  @SubscribeMessage("match:start")
-  async handleStartMatch(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { matchId: string },
-  ) {
-    const { matchId } = data;
-
-    try {
-      const question = await this.matchService.getCurrentQuestion(matchId);
-      if (!question) {
-        client.emit("error", { message: "No questions available" });
-        return;
-      }
-
-      this.server.to(matchId).emit("game:question", question);
-      this.startTimer(matchId, 30);
-
-      this.logger.log(`Match ${matchId} started`);
-    } catch (error) {
-      client.emit("error", { message: error.message });
-    }
-  }
-
-  @SubscribeMessage("game:answer")
-  async handleAnswer(
-    @ConnectedSocket() client: Socket,
-    @MessageBody()
-    data: {
-      matchId: string;
-      playerId: string;
-      teamSide: string;
-      answerIndex: number;
-      responseTime: number;
-    },
-  ) {
-    const { matchId, playerId, teamSide, answerIndex, responseTime } = data;
-
-    try {
-      // Stop current timer
-      this.stopTimer(matchId);
-
-      // Submit answer and get result
-      const result = await this.matchService.submitAnswer(
-        matchId,
-        playerId,
-        teamSide,
-        answerIndex,
-        responseTime,
-      );
-
-      // Broadcast round result
-      this.server.to(matchId).emit("game:round-result", {
-        ...result,
-        playerId,
-        teamSide,
-      });
-
-      // Broadcast score update
-      this.server.to(matchId).emit("game:score-update", {
-        left: result.teamScores.left,
-        right: result.teamScores.right,
-      });
-
-      // Wait 3 seconds then advance to next question
-      setTimeout(async () => {
-        const next = await this.matchService.advanceQuestion(matchId);
-        if (next?.gameOver) {
-          const stats = await this.matchService.getMatchStats(matchId);
-          this.server.to(matchId).emit("game:end", {
-            matchId,
-            winnerTeamId: next.winner,
-            finalRopePosition: result.newRopePosition,
-            teamScores: next.teamScores,
-            stats,
-          });
-          this.logger.log(`Match ${matchId} ended. Winner: ${next.winner}`);
-        } else if (next?.question) {
-          this.server.to(matchId).emit("game:question", next.question);
-          this.startTimer(matchId, 30);
-        }
-      }, 3000);
-    } catch (error) {
-      client.emit("error", { message: error.message });
-    }
   }
 
   @SubscribeMessage("qr:create")
@@ -284,27 +123,6 @@ export class RealtimeGateway
     const room = `session:${sessionToken}`;
     this.server.to(room).emit("child:deleted", { childId });
     this.logger.log(`Child ${childId} deleted, notified session ${sessionToken}`);
-  }
-
-  private startTimer(matchId: string, seconds: number) {
-    let remaining = seconds;
-    const interval = setInterval(() => {
-      remaining -= 1;
-      this.server.to(matchId).emit("game:timer", { timeRemaining: remaining });
-      if (remaining <= 0) {
-        clearInterval(interval);
-        this.matchTimers.delete(matchId);
-      }
-    }, 1000);
-    this.matchTimers.set(matchId, interval);
-  }
-
-  private stopTimer(matchId: string) {
-    const timer = this.matchTimers.get(matchId);
-    if (timer) {
-      clearInterval(timer);
-      this.matchTimers.delete(matchId);
-    }
   }
 
   // ─── Homework chat ───────────────────────────────────────────────────────────
@@ -434,9 +252,9 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
       } else {
         client.emit("homework:stopped");
       }
-    } catch (error) {
-      this.logger.error(`[Gemini] homework:chat unhandled error session=${sessionId}: ${error.message}`, error.stack);
-      client.emit("homework:error", "Something went wrong. Try again.");
+    } catch (error: any) {
+      this.logger.error(`\n❌ [Gemini] homework:chat unhandled error session=${sessionId}: ${error.message}`, error.stack);
+      client.emit("homework:error", error.message || "Failed to generate response. Please try again.");
     } finally {
       this.activeStreams.delete(client.id);
     }
@@ -484,11 +302,16 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
         client.emit("homework:stopped");
       }
     } catch (err: any) {
-      if (controller.signal.aborted) {
+      if (
+        controller.signal.aborted ||
+        err.name === "AbortError" ||
+        err.message?.includes("aborted") ||
+        err.message?.includes("reading from the stream")
+      ) {
         client.emit("homework:stopped");
       } else {
-        this.logger.error(`[Gemini] homework:guest-chat error: ${err.message}`);
-        client.emit("homework:error", "Something went wrong. Try again.");
+        this.logger.error(`\n❌ [Gemini] homework:guest-chat error: ${err.message}`, err.stack);
+        client.emit("homework:error", err.message || "Failed to generate response. Please try again.");
       }
     } finally {
       this.activeStreams.delete(client.id);

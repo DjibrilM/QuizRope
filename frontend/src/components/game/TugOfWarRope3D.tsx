@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
   useAnimatedProps,
   Easing,
+  type SharedValue,
 } from "react-native-reanimated";
 import Svg, { G, Circle, Rect, Path, Ellipse } from "react-native-svg";
 import { PositionIndicator } from "./rope/PositionIndicator";
@@ -130,9 +131,9 @@ function AnimChar({
   skin: string;
   hair: string;
   scale: number;
-  smooth: Animated.SharedValue<number>;
-  elapsed: Animated.SharedValue<number>;
-  tension: Animated.SharedValue<number>;
+  smooth: SharedValue<number>;
+  elapsed: SharedValue<number>;
+  tension: SharedValue<number>;
 }) {
   const dirSign = isLeft ? -1 : 1;
   // World X when smooth=0: teamAnchor ± char offset
@@ -178,8 +179,8 @@ function AnimRope({
   smooth,
   tension,
 }: {
-  smooth: Animated.SharedValue<number>;
-  tension: Animated.SharedValue<number>;
+  smooth: SharedValue<number>;
+  tension: SharedValue<number>;
 }) {
   const shadowProps = useAnimatedProps(() => {
     const pos = smooth.value * SCALE;
@@ -242,7 +243,7 @@ function AnimRope({
 }
 
 // ── Animated center flag ──────────────────────────────────────────────────────
-function AnimFlag({ smooth }: { smooth: Animated.SharedValue<number> }) {
+function AnimFlag({ smooth }: { smooth: SharedValue<number> }) {
   const props = useAnimatedProps(() => ({
     transform: `translate(${CX + smooth.value * SCALE}, ${ROPE_Y})`,
   }));

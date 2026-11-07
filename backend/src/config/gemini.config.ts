@@ -1,5 +1,6 @@
 import { Logger } from "@nestjs/common";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { GEMINI_MODEL } from "../constants";
 
 const logger = new Logger("GeminiConfig");
 
@@ -10,22 +11,23 @@ export function initializeGemini() {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    logger.warn(
-      "Missing Gemini API key — using mock questions. Set GEMINI_API_KEY for AI-generated questions.",
+    logger.error(
+      "Missing Gemini API key. Set GEMINI_API_KEY to enable AI question generation.",
     );
     isGeminiConfigured = false;
     return null;
   }
 
   try {
+    const modelName = process.env.GEMINI_MODEL || GEMINI_MODEL;
     langchainModel = new ChatGoogleGenerativeAI({
-      model: "gemini-3.1-flash-lite-preview",
+      model: modelName,
       apiKey,
       temperature: 0.7,
       maxOutputTokens: 8192,
     });
     isGeminiConfigured = true;
-    logger.log("Gemini AI initialized via LangChain");
+    logger.log(`Gemini AI initialized via LangChain with model: ${modelName}`);
     return langchainModel;
   } catch (error) {
     logger.error("Gemini initialization failed:", error.message);
@@ -35,5 +37,8 @@ export function initializeGemini() {
 }
 
 export function getLangChainModel(): ChatGoogleGenerativeAI | null {
+  if (!langchainModel && process.env.GEMINI_API_KEY) {
+    initializeGemini();
+  }
   return langchainModel;
 }

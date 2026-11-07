@@ -60,6 +60,9 @@ export class AuthController {
   @Post("refresh")
   @UseGuards(FirebaseAuthGuard)
   async refresh(@Req() req) {
+    if (req.user?.role !== "parent") {
+      throw new UnauthorizedException("Only parents can refresh parent tokens");
+    }
     const parent = req.user;
     if (!parent?._id) {
       throw new UnauthorizedException("Invalid session");

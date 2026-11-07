@@ -1,29 +1,37 @@
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-let configured = false;
+let googleConfigured = false;
 
 class FirebaseAuthService {
   configure(webClientId?: string) {
     if (!webClientId) {
-      console.warn('No Google Web Client ID provided — Firebase auth disabled');
+      console.warn('No Google Web Client ID provided — Google Sign-In disabled');
+      googleConfigured = false;
       return;
     }
 
     try {
       GoogleSignin.configure({ webClientId });
-      configured = true;
+      googleConfigured = true;
     } catch (error) {
       console.warn('Google Sign-In configuration failed:', error);
-      configured = false;
+      googleConfigured = false;
     }
   }
 
   isConfigured(): boolean {
-    return configured;
+    return true;
+  }
+
+  isGoogleConfigured(): boolean {
+    return googleConfigured;
   }
 
   async signInWithGoogle(): Promise<{ idToken: string; user: any }> {
+    if (!googleConfigured) {
+      throw new Error('Google Sign-In is not configured. Web Client ID missing.');
+    }
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const response = await GoogleSignin.signIn();
 

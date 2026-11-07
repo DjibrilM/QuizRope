@@ -52,6 +52,7 @@ export class ChildrenController {
   @Post('qr-session')
   @UseGuards(FirebaseAuthGuard)
   async createQRSession(@Req() req) {
+    if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
     return this.childrenService.createQRSession(req.user._id);
   }
 

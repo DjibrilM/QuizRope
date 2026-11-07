@@ -28,6 +28,28 @@ import { NotificationService } from "../../src/services/NotificationService";
 
 type Status = "idle" | "scanning" | "loading" | "error";
 
+export function extractCodeFromScan(data: string): string {
+  if (!data) return "";
+  const trimmed = data.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed.token && typeof parsed.token === "string") return parsed.token.trim().toUpperCase();
+    if (parsed.code && typeof parsed.code === "string") return parsed.code.trim().toUpperCase();
+    if (parsed.sessionToken && typeof parsed.sessionToken === "string") return parsed.sessionToken.trim().toUpperCase();
+  } catch {}
+
+  const paramMatch = trimmed.match(/[?&](?:code|token)=([A-Za-z0-9]+)/i);
+  if (paramMatch) return paramMatch[1].toUpperCase();
+
+  const eightMatch = trimmed.match(/\b([A-Za-z0-9]{8})\b/);
+  if (eightMatch) return eightMatch[1].toUpperCase();
+
+  const sixMatch = trimmed.match(/\b([A-Za-z0-9]{6})\b/);
+  if (sixMatch) return sixMatch[1].toUpperCase();
+
+  return trimmed.toUpperCase();
+}
+
 export default function ChildJoinScreen() {
   const { t } = useTranslation(["device", "common"]);
   usePortrait();
@@ -66,7 +88,7 @@ export default function ChildJoinScreen() {
       setStatus("loading");
       setError("");
       try {
-        const cleanCode = rawCode.trim().toUpperCase();
+        const cleanCode = extractCodeFromScan(rawCode);
         console.log("Attempting to join with code:", cleanCode);
 
         // Guest link codes are 6 characters, session tokens are 8 characters

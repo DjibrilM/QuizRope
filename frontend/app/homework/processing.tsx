@@ -30,6 +30,7 @@ export default function HomeworkProcessingScreen() {
           clearInterval(stepInterval);
           router.replace(`/homework/session/${sessionId}` as any);
         } else if (session.status === "FAILED") {
+          console.error("🚨 [Homework Processing Failed]:", session.errorMessage);
           clearInterval(pollInterval);
           clearInterval(stepInterval);
           Alert.alert(
@@ -37,7 +38,6 @@ export default function HomeworkProcessingScreen() {
             session.errorMessage ?? t("errors.analysisFailedDesc"),
             [{ text: t("common:buttons.ok"), onPress: () => router.back() }],
           );
-
         }
       } catch {
         // network blip — keep polling

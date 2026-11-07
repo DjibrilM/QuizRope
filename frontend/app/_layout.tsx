@@ -227,13 +227,15 @@ function useProfileVerification() {
       } catch (err: any) {
         // Only sign out on explicit auth rejection (401/403).
         // Network errors (offline, timeout) let the user continue with cached data.
-        const status = err?.response?.status ?? 0;
+        const status = err?.status ?? err?.response?.status ?? 0;
         const isAuthError = status === 401 || status === 403;
         if (isAuthError) {
-          clearAllGuestData().catch(() => {});
           apiService.clearToken();
           useGameStore.getState().logout();
           queryClient.clear();
+          if (userRole === "child") {
+            router.replace("/auth/child-deleted" as any);
+          }
         }
       } finally {
         setIsVerified(true);
@@ -270,15 +272,18 @@ function useLocaleSync() {
 
 function useProtectedRoute(isLayoutReady: boolean, isVerified: boolean) {
   const segments = useSegments();
-  const { isAuthenticated, _hasHydrated, authToken } = useGameStore();
+  const { isAuthenticated, _hasHydrated, authToken, ghostToken } = useGameStore();
   const hasNavigated = useRef(false);
 
   useEffect(() => {
     if (!_hasHydrated || !isLayoutReady || !isVerified) return;
 
-    // Restore token to API service on hydration
+    // Restore tokens to API service on hydration
     if (authToken) {
       apiService.setToken(authToken);
+    }
+    if (ghostToken) {
+      apiService.setGhostToken(ghostToken);
     }
 
     const currentRoute = segments[0] || "index";
@@ -301,7 +306,7 @@ function useProtectedRoute(isLayoutReady: boolean, isVerified: boolean) {
         hasNavigated.current = false;
       }, 500);
     }
-  }, [isAuthenticated, segments, _hasHydrated, authToken, isLayoutReady, isVerified]);
+  }, [isAuthenticated, segments, _hasHydrated, authToken, ghostToken, isLayoutReady, isVerified]);
 }
 
 export default function RootLayout() {
@@ -325,7 +330,6 @@ export default function RootLayout() {
   useEffect(() => {
     apiService.setOnUnauthorized(() => {
       const store = useGameStore.getState();
-      clearAllGuestData().catch(() => {});
       apiService.clearToken();
       store.logout();
       queryClient.clear();

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as jwt from 'jsonwebtoken';
@@ -58,9 +58,9 @@ export class AuthService {
       const admin = require('firebase-admin');
       const decodedToken = await admin.auth().verifyIdToken(token);
       return decodedToken;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Token validation failed:', error.message);
-      throw error;
+      throw new UnauthorizedException(error.message || 'Invalid Firebase token');
     }
   }
 

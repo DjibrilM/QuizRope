@@ -232,21 +232,4 @@ export class MatchController {
     const parentId = req.user.role === 'child' ? req.user.parentId : req.user._id;
     return this.matchService.getMatchAnswerReview(matchId, childId, parentId.toString());
   }
-
-  /** Guest kids use this to look up a match by the 6-char lobby code. */
-  @Get('join/:code')
-  async joinByCode(@Param('code') code: string) {
-    const match = await this.matchService.findByCode(code);
-    if (!match) {
-      return { found: false };
-    }
-    return {
-      found: true,
-      matchId: match._id.toString(),
-      subject: (match as any).subject,
-      difficulty: (match as any).difficulty,
-      maxRounds: (match as any).maxRounds,
-      status: (match as any).status,
-    };
-  }
 }

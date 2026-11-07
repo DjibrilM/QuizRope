@@ -6,7 +6,11 @@ dist/
 
 # Firebase
 GoogleService-Info.plist
+google-services.json
 firebase-config.json
+serviceAccountKey.json
+firebase-service-account.json
+*firebase-adminsdk*.json
 
 # Expo
 .expo/

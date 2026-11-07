@@ -17,6 +17,7 @@ import {
   FlatList,
   ActivityIndicator,
   Animated,
+  Platform,
 } from "react-native";
 import {
   SafeAreaView,
@@ -133,26 +134,26 @@ export const HomeworkChatSheet = forwardRef<ChatSheetRef, Props>(
 
     return (
       <Modal
-        style={{ height: "100%" }}
         visible={visible}
         animationType="slide"
         transparent={true}
         onRequestClose={handleClose}
       >
-        <SafeAreaView className="flex-1">
+        <View className="flex-1 bg-black/50">
           <KeyboardAvoidingView
-            behavior={"padding"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={{ flex: 1 }}
             keyboardVerticalOffset={isInputFocused ? 0 : -insets.bottom}
           >
             {/* Backdrop (hidden but functional for tapping to close) */}
             <Pressable style={{ flex: 1 }} onPress={handleClose} />
 
-            {/* Sheet Content */}
-            <View
+            {/* Chat Area Sheet */}
+            <SafeAreaView
+              edges={isInputFocused ? ["left", "right"] : ["bottom", "left", "right"]}
               className="bg-[#13101C] rounded-t-[28px]"
               style={{
-                height: "100%",
+                height: "90%",
               }}
             >
               <View className="flex-row items-center justify-between px-5 pb-3 border-b border-[#1E1828] pt-4">
@@ -211,10 +212,7 @@ export const HomeworkChatSheet = forwardRef<ChatSheetRef, Props>(
                   }
                 />
 
-                <View
-                  className="flex-row items-end px-3 pt-3 my-2.5 gap-2 border-t border-[#1E1828]"
-                  // style={{ paddingBottom: Math.max(insets.bottom, 16) }}
-                >
+                <View className="flex-row items-end px-3 pt-2.5 pb-2 gap-2 border-t border-[#1E1828]">
                   <TextInput
                     onFocus={() => setIsInputFocused(true)}
                     onBlur={() => setIsInputFocused(false)}
@@ -250,9 +248,9 @@ export const HomeworkChatSheet = forwardRef<ChatSheetRef, Props>(
                   )}
                 </View>
               </View>
-            </View>
+            </SafeAreaView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
     );
   },

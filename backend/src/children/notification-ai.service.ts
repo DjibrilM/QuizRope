@@ -17,8 +17,8 @@ export class NotificationAiService {
   ): Promise<string> {
     const apiKey = this.configService.get<string>('gemini.apiKey');
     if (!apiKey) {
-      this.logger.warn('GEMINI_API_KEY not configured, using fallback message');
-      return `We miss you, ${childName}! Ready for some fun learning today? 🚀`;
+      this.logger.error('GEMINI_API_KEY is not configured');
+      throw new Error('GEMINI_API_KEY is not configured');
     }
 
     const model = new ChatGoogleGenerativeAI({
@@ -63,9 +63,9 @@ export class NotificationAiService {
       
       // Clean up any quotes or extra whitespace
       return text.replace(/^"|"$/g, '').trim();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to generate AI notification: ${error.message}`);
-      return `Hey ${childName}, your brain is missing its daily workout! Come back and play! 🧠✨`;
+      throw new Error(`Failed to generate AI notification from Gemini: ${error.message}`);
     }
   }
 }

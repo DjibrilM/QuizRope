@@ -49,6 +49,8 @@ export class FirebaseAuthGuard implements CanActivate {
             };
             return true;
           }
+          // Child was deleted or does not exist — reject auth so deleted profiles cannot continue
+          return false;
         }
         // Fallback for session tokens without childId yet
         request.user = { _id: decoded.sub, parentId: decoded.parentId, role: 'child' };

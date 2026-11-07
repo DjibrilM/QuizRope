@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { View, Text, ScrollView, Pressable, RefreshControl } from "react-native";
+import { View, Text, ScrollView, Pressable, RefreshControl, type DimensionValue } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -323,7 +323,7 @@ function SubjectRow({
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
   const theme = getSubjectTheme(stat.subject);
-  const barWidth = `${Math.max(stat.accuracy, 4)}%`;
+  const barWidth: DimensionValue = `${Math.max(stat.accuracy, 4)}%`;
   const accuracyColor =
     stat.accuracy >= 70 ? "#10B981" : stat.accuracy >= 40 ? "#F59E0B" : "#EF4444";
 

@@ -26,14 +26,14 @@ import { useTranslation } from "react-i18next";
 
 import { getDailyCount, incrementDailyCount, UPLOAD_LIMIT } from "../../src/hooks/useHomeworkLimit";
 
-// 800px is sufficient for LLM text recognition; quality 0.4 keeps the file small
-const MAX_DIMENSION = 800;
+// 1024px maximum dimension keeps Gemini multimodal vision within 1 tile (~258 tokens) while preserving math/handwriting clarity
+const MAX_DIMENSION = 1024;
 
 async function compressForAnalysis(uri: string): Promise<{ uri: string; base64: string }> {
   const imageRef = await ImageManipulator.manipulate(uri)
     .resize({ width: MAX_DIMENSION })
     .renderAsync();
-  const result = await imageRef.saveAsync({ compress: 0.4, format: SaveFormat.JPEG, base64: true });
+  const result = await imageRef.saveAsync({ compress: 0.65, format: SaveFormat.JPEG, base64: true });
   return { uri: result.uri, base64: result.base64! };
 }
 
@@ -133,9 +133,9 @@ export default function CaptureScreen() {
         router.replace(`/homework/processing?sessionId=${session._id}` as any);
       }
     } catch (err: any) {
+      console.error("🚨 [Homework Capture Upload Error]:", err);
       setUploading(false);
       Alert.alert(t("errors.uploadFailed"), err?.message ?? t("common:buttons.tryAgain"));
-
     }
   };
 

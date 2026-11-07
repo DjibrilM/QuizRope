@@ -1,6 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
@@ -39,6 +40,34 @@ async function bootstrap() {
   console.log(process.env.GEMINI_API_KEY);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Prevent aborted AI stream rejections from crashing the Node.js process
+  process.on("unhandledRejection", (reason: any) => {
+    if (
+      reason?.message?.includes("reading from the stream") ||
+      reason?.name === "AbortError" ||
+      reason?.name === "GoogleGenerativeAIAbortError" ||
+      reason?.message?.includes("aborted")
+    ) {
+      logger.log("[Stream] AI stream aborted cleanly by client disconnect.");
+      return;
+    }
+    logger.error("Unhandled Promise Rejection:", reason?.stack || reason);
+  });
+
+  process.on("uncaughtException", (error: any) => {
+    if (
+      error?.message?.includes("reading from the stream") ||
+      error?.name === "AbortError" ||
+      error?.name === "GoogleGenerativeAIAbortError" ||
+      error?.message?.includes("aborted")
+    ) {
+      logger.log("[Stream] Uncaught stream abort exception handled gracefully.");
+      return;
+    }
+    logger.error("Uncaught Exception:", error?.stack || error);
+  });
 
   const port = process.env.PORT || 3000;
   console.log(port);

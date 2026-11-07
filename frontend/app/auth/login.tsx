@@ -73,11 +73,6 @@ export default function LoginScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      if (!firebaseAuthService.isConfigured()) {
-        throw new Error(
-          "Authentication is not configured. Please contact support.",
-        );
-      }
       const { idToken } = await firebaseAuthService.signInWithEmail(
         email.trim(),
         password,
@@ -92,6 +87,13 @@ export default function LoginScreen() {
       }
       await handleLogin(idToken);
     } catch (err: any) {
+      if (err?.message === "email_not_verified") {
+        router.replace({
+          pathname: "/auth/verify-email" as any,
+          params: { email: email.trim() },
+        });
+        return;
+      }
       showApiError(err);
     } finally {
       setLoading(false);
@@ -101,9 +103,9 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      if (!firebaseAuthService.isConfigured()) {
+      if (!firebaseAuthService.isGoogleConfigured()) {
         throw new Error(
-          "Authentication is not configured. Please contact support.",
+          "Google Sign-In is not configured. Please sign in with email and password.",
         );
       }
       const { idToken } = await firebaseAuthService.signInWithGoogle();
