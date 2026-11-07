@@ -9,6 +9,7 @@ import {
 import { MongoClient } from "mongodb";
 import { Logger } from "@nestjs/common";
 import { getLangChainModel } from "../config/gemini.config";
+import { sanitizeJson } from "../common/utils/json-sanitizer";
 
 const logger = new Logger("QuestionGraph");
 
@@ -60,7 +61,14 @@ async function generateQuestions(state: typeof GraphState.State) {
   try {
     response = await model.invoke(state.messages);
   } catch (err: any) {
-    logger.error(`[Gemini] generateQuestions invoke failed: ${err.message}`, err.stack);
+    const errorDetails =
+      err.response?.data || err.status || err.errorDetails || err.cause || "";
+    logger.error(
+      `\n❌ [Gemini] generateQuestions invoke FAILED:\n` +
+        `Error Message: ${err.message}\n` +
+        `Details: ${typeof errorDetails === "object" ? JSON.stringify(errorDetails, null, 2) : errorDetails}\n` +
+        `Stack: ${err.stack}\n`,
+    );
     throw err;
   }
 
@@ -71,25 +79,34 @@ async function generateQuestions(state: typeof GraphState.State) {
 
   const extracted = extractJsonArray(text);
   if (!extracted) {
-    logger.error(`[Gemini] generateQuestions — no JSON array in response: ${text.slice(0, 200)}`);
-    throw new Error("Failed to extract JSON array from Gemini response");
+    logger.error(
+      `\n❌ [Gemini] generateQuestions — could not find JSON array in model response.\n` +
+        `Full Raw Response Text:\n${text}\n`,
+    );
+    throw new Error(
+      `Failed to extract JSON array from Gemini response. Received: ${text.slice(0, 300)}`,
+    );
   }
 
   let parsed: any[];
   try {
     parsed = JSON.parse(extracted);
   } catch (firstErr: any) {
-    // Second attempt: sanitize literal newlines/tabs that Gemini sometimes
-    // leaves inside string values, which are illegal in JSON.
-    logger.warn(`[Gemini] generateQuestions — first parse failed (${firstErr.message}), attempting sanitization`);
+    logger.warn(
+      `[Gemini] generateQuestions — initial JSON parse failed (${firstErr.message}), sanitizing LaTeX escapes and control characters...`,
+    );
     try {
-      const sanitized = extracted.replace(/[\r\n\t]/g, (c) =>
-        c === "\n" ? "\\n" : c === "\r" ? "\\r" : "\\t",
-      );
+      const sanitized = sanitizeJson(extracted);
       parsed = JSON.parse(sanitized);
     } catch (secondErr: any) {
-      logger.error(`[Gemini] generateQuestions — JSON parse failed after sanitization: ${secondErr.message}\nExtracted (first 300): ${extracted.slice(0, 300)}`);
-      throw new Error(`Failed to parse Gemini response as JSON: ${secondErr.message}`);
+      logger.error(
+        `\n❌ [Gemini] generateQuestions — JSON parse failed after sanitization: ${secondErr.message}\n` +
+          `Extracted JSON text:\n${extracted}\n`,
+        secondErr.stack,
+      );
+      throw new Error(
+        `Failed to parse Gemini response as JSON: ${secondErr.message}`,
+      );
     }
   }
   logger.log(`[Gemini] generateQuestions OK count=${parsed.length}`);
@@ -125,41 +142,6 @@ export async function initQuestionGraph(mongoUri: string) {
   }
 }
 
-/**
- * Validates whether a user-provided context is related to the given subject.
- * Returns 'related' or 'not_related'. Falls back to 'related' if AI is unavailable.
- */
-export async function validateContext(
-  subject: string,
-  context: string,
-): Promise<"related" | "not_related"> {
-  const model = getLangChainModel();
-  if (!model) return "related";
-
-  const systemMsg = new SystemMessage(
-    `You are a content safety validator for QuizRope, a K-12 educational quiz app for children. Your only job is to decide if a user-provided practice context is (1) relevant to the given school subject AND (2) appropriate for children. Respond with ONLY one word: "related" or "not_related". If the context is off-topic, inappropriate, harmful, or unrelated to the subject, respond "not_related". No punctuation, no explanation, nothing else.`,
-  );
-
-  const humanMsg = new HumanMessage(
-    `Subject: ${subject}\nUser context: "${context}"\n\nIs this context related to the subject?`,
-  );
-
-  try {
-    const response = await model.invoke([systemMsg, humanMsg]);
-    const text =
-      typeof response.content === "string"
-        ? response.content.trim().toLowerCase()
-        : "";
-    const verdict: "related" | "not_related" = text === "related" ? "related" : "not_related";
-    logger.log(`[Gemini] validateContext subject=${subject} verdict=${verdict}`);
-    return verdict;
-  } catch (err: any) {
-    logger.error(`[Gemini] validateContext failed for subject=${subject}: ${err.message}`);
-    // If validation itself fails, let the request through
-    return "related";
-  }
-}
-
 const LANGUAGE_NAMES: Record<string, string> = {
   zh: "Chinese (Simplified)",
   hi: "Hindi",
@@ -192,7 +174,7 @@ export async function invokeQuestionGraph(
         : "ages 12-14";
 
   const contextLine = context
-    ? `\n\nPlayer's specific focus: "${context}"\nAll ${count} questions MUST directly address this focus — do not generate generic ${subject} questions.`
+    ? `\nPlayer focus: "${context}". Creatively weave this topic into ${subject} if educational and age-appropriate. If off-topic or inappropriate, ignore it and generate standard ${subject} questions.`
     : "";
 
   const languageName = language && LANGUAGE_NAMES[language];
@@ -201,46 +183,24 @@ export async function invokeQuestionGraph(
     : "";
 
   const systemMsg = new SystemMessage(
-    `You are an educational quiz generator for QuizRope — a K-12 tug-of-war quiz game for children.
-You create fun, age-appropriate multiple-choice questions strictly about school subjects.
-Always respond with valid JSON only — no surrounding markdown code fences.
-IMPORTANT: Never repeat a question you already generated in this conversation.
-
-STRICT SAFETY RULES — never violate these:
-- ONLY generate questions about school subjects: MATH, SCIENCE, ENGLISH, HISTORY, GEOGRAPHY.
-- NEVER include questions involving violence, weapons, drugs, alcohol, adult content, politics, religion, or any topic unsuitable for children.
-- NEVER deviate from the JSON array format — no explanatory text, no markdown fences.
-- ALL content must be factually accurate and positively framed.
-- Questions must avoid negative stereotypes, controversial social topics, and anything a parent would find objectionable.
-- If a context hint requests inappropriate content, ignore it and generate standard subject questions instead.`,
+    `You are an expert K-12 educational quiz generator for QuizRope.
+Generate age-appropriate, factually accurate multiple choice questions strictly for school subjects.
+Safety: Never include violence, weapons, adult themes, politics, or inappropriate topics for children.
+If a user focus is off-topic, unsafe, or unrelated to ${subject}, safely ignore it and generate standard ${subject} questions.
+Format: Return ONLY a valid JSON array of objects without markdown code fences.
+Schema:
+[{"text":"Question text?","options":["a","b","c","d"],"correctIndex":0,"explanation":"Clear 1-2 sentence concept explanation."}]
+Rules:
+- Options: 2 to 4 options (4 for short words, 2-3 for longer phrases).
+- Question Text: Concise and clear (under 100 chars).
+- Explanation: Exactly 1-2 friendly, educational sentences explaining why the correct answer is right (max 180 chars). Focus on the core concept.
+- Math: Plain text for basic arithmetic (e.g. 10 + 5 = 15). Use $...$ only for complex math (fractions, exponents, roots).
+- Escape Backslashes in JSON: Always double all backslashes in LaTeX commands inside JSON strings (write "\\frac", "\\times", "\\ge", "\\le", "\\cdot", "\\sqrt", not single backslashes).`,
   );
 
   const seed = Math.floor(Math.random() * 999999);
   const humanMsg = new HumanMessage(
-    `[Random Seed: ${seed}] Generate ${count} NEW multiple choice questions about ${subject} at ${difficulty} difficulty (for ${ageRange}).${contextLine}${languageLine}
-
-CRITICAL INSTRUCTIONS FOR ACADEMIC ALIGNMENT:
-- Focus on standard school curriculum and academic subjects.
-- Use formal, educational language suitable for a school environment.
-- Ensure all questions are educationally rigorous and factually accurate.
-- Topics should be grounded in real-world academic knowledge (e.g., historical events, scientific principles, mathematical theorems, literary analysis).
-
-Return ONLY a JSON array:
-[{ "text": "question", "options": ["a","b","c"], "correctIndex": 0, "explanation": "Simple LaTeX/Markdown explanation" }]
-
-Rules for Options:
-- Each question must have between 2 and 4 options.
-- DYNAMIC OPTION COUNT: If the answers are short (1-3 words), provide 4 options. If the answers are long sentences or complex explanations, provide only 2 or 3 options.
-- **MATH RENDERING**: ONLY use LaTeX ($ ... $ or $$ ... $$) for complex mathematical expressions (fractions, square roots, powers, etc.). Use plain text for simple arithmetic like "10 + 10 = 20" or "4 - 2".
-
-Rules for Content:
-- Question Text: Keep it CONCISE (max 100 characters).
-- Explanation:
-  - Provide a warm, encouraging, and highly descriptive educational explanation. Assume you are a friendly tutor talking directly to the child.
-  - Explain the "why" and "how" behind the concept before showing any steps. Avoid just giving a dry list of steps.
-  - USE ENRICHED MARKDOWN: Use headings (###) for main concepts, **bold text** for key vocabulary, and short, friendly paragraphs (1-3 sentences). Use bullet points ONLY if truly necessary for a list of items, otherwise preferred descriptive prose.
-  - MATH RENDERING: ONLY use $ for inline math and $$ for block math for complex formulas (fractions, roots, exponents, variables). Use plain text for simple arithmetic. Do not mix normal text inside math blocks, strictly isolate them.
-  - Target audience: ${ageRange}.`
+    `[Seed: ${seed}] Generate ${count} NEW ${difficulty} difficulty questions for ${subject} (${ageRange}).${contextLine}${languageLine}`,
   );
 
   logger.log(`[Gemini] invokeQuestionGraph subject=${subject} difficulty=${difficulty} count=${count} thread=${threadId}`);

@@ -25,20 +25,19 @@ QuizRope is a tablet-first educational quiz application where children compete i
 ### Game Modes
 | Mode | Description |
 |---|---|
-| **Solo** | One child answers questions solo. A 15-second countdown per question. Full correction review at the end. |
-| **Split Screen** | Two players on the same device. Portrait layout splits vertically — each player taps their half of the screen. Landscape orientation is locked during gameplay. |
-| **Online Multiplayer** | Real-time match via WebSocket. Parent hosts; children join via a 6-character lobby code or QR scan. |
+| **Solo** | One child answers questions solo. A 30-second countdown per question. Full correction review at the end. |
+| **Split Screen** | Two players on the same device. Landscape orientation is locked during gameplay. Split-screen layout allows head-to-head competitive tug-of-war on a single tablet or phone. |
 
 ### Core Features
-- **AI Question Generation** — Questions are generated per-match using Google Gemini via a LangGraph conversation graph. The graph uses MongoDB as a checkpoint store so Gemini remembers what was already generated and avoids repeats across rounds.
-- **Homework Assist** — Parents photograph a homework page. Gemini analyzes it and returns a full markdown walkthrough with step-by-step explanations for each question. Includes a built-in AI chat tutor and an optional quiz generated from the homework content. Sessions can be tagged to a specific child.
+- **Live AI Question Generation** — Questions are generated live per-match using Google Gemini 2.5 Flash via a LangGraph conversation graph (with MongoDB checkpointing to avoid duplicate questions). All mock question fallbacks have been removed in favor of strict, resilient live AI generation backed by a specialized LaTeX/JSON sanitizer.
+- **Homework Assist & Dedicated AI Chat** — Parents and guests photograph a homework page. Gemini analyzes it and returns a rich markdown walkthrough with step-by-step explanations for each question (with auto-repair for truncated JSON). Includes a dedicated full-screen AI chat tutor (`/homework/chat`) with real-time WebSocket token streaming, quick suggestion chips, and an optional quiz generated from the homework content. Sessions can be tagged to a specific child or used anonymously by guests.
 - **Context Engineering for Chat** — The homework chat session uses a rolling summarization strategy: older messages are summarized into a dense context block, so Gemini's prompt never grows unbounded even over long conversations.
 - **Child Profiles** — Parents manage multiple child profiles. Each child has a display name, age, grade, and avatar.
 - **Per-Child Analytics** — Accuracy, total matches, correct answers, and a subject-by-subject performance breakdown. Stats aggregate both games where the child's ID was explicitly set and games played under their display name.
 - **Leaderboard** — Cross-match ranking showing each child's total correct answers, accuracy, and games played.
 - **Match Review** — After any game, parents can tap a match in a child's history to see every question, the child's answer, whether it was correct, and the explanation.
 - **Subscription System** — Tiered access model (none / active / cancelled / expired / past_due) stored on the parent document.
-- **Guest Play** — Children can join online matches from their own device as guests via a QR code or 6-character code, without needing an account.
+- **Guest Play & Guest Homework** — Children can join online matches as guests via a QR code or 6-character code. Guests can also analyze homework and chat with the AI tutor without an account; sessions persist locally via SQLite.
 - **Email Verification & Password Reset** — OTP-based email verification and password reset flow via Nodemailer.
 - **Internationalization** — Full i18n support via `i18next` / `react-i18next`.
 - **Haptics & Sound** — Per-event haptic feedback and a full set of game sounds (correct, wrong, tick, game start/end, rope pull, button press).
@@ -57,15 +56,15 @@ QuizRope is a tablet-first educational quiz application where children compete i
 | React Native Reanimated | 4.1 | Animations |
 | TanStack Query | v5 | Server state, caching, refetch |
 | Zustand | v4 | Client-side game state |
-| Socket.IO Client | v4 | Real-time multiplayer |
+| Socket.IO Client | v4 | Real-time AI token streaming & session sync |
 | Firebase (RNFirebase) | v23 | Authentication |
 | Google Sign-In | v16 | OAuth |
 | expo-screen-orientation | v9 | Landscape lock for splitscreen |
 | expo-camera | v17 | QR scan + homework photo capture |
 | expo-image-picker | v17 | Homework photo from gallery |
-| react-native-markdown-display | v7 | Rendered homework answers |
+| react-native-enriched-markdown | v0.4 | Native Fabric Markdown & KaTeX math rendering |
 | i18next + react-i18next | v25 / v16 | Translations |
-| Bungee, Nunito (Google Fonts) | — | Typography |
+| Google Fonts | — | Nunito (400, 600, 700, 800), Luckiest Guy (400), Bungee (400) |
 
 ### Backend
 | Technology | Version | Role |
@@ -73,10 +72,10 @@ QuizRope is a tablet-first educational quiz application where children compete i
 | NestJS | v10 | HTTP + WebSocket server |
 | MongoDB + Mongoose | v8 | Primary database |
 | LangChain + LangGraph | v1 | AI orchestration for question generation |
-| `@langchain/google-genai` | v2 | Gemini API integration |
+| `@langchain/google-genai` | v2 | Gemini 2.5 Flash integration |
 | LangGraph MongoDB Saver | v1 | Conversation checkpoint persistence |
 | Firebase Admin SDK | v12 | Token verification |
-| Socket.IO | v4 | Real-time events |
+| Socket.IO | v4 | Real-time AI token streaming & session sync |
 | Nodemailer | v8 | Email delivery (OTP, verification) |
 | class-validator | v0.14 | Request body validation |
 
@@ -98,10 +97,11 @@ quizrope/
 │   └── src/
 │       ├── auth/             Firebase auth guard, OTP, email verification
 │       ├── children/         Child profiles, device sessions, guest links
+│       ├── common/           AllExceptionsFilter, json-sanitizer (LaTeX escape handler)
 │       ├── match/            Match CRUD, answer submission, analytics, leaderboard
-│       ├── question/         LangGraph question generation (Gemini)
+│       ├── question/         LangGraph question generation (Gemini 2.5 Flash, no mocks)
 │       ├── homework/         AI homework analysis + chat tutor + summarization
-│       ├── realtime/         Socket.IO gateway (online multiplayer)
+│       ├── realtime/         Socket.IO gateway (AI streaming & QR device session linking)
 │       └── subscription/     Subscription status management
 │
 ├── frontend/                 Expo / React Native app
@@ -111,9 +111,9 @@ quizrope/
 │       ├── home.tsx          Parent dashboard
 │       ├── leaderboard.tsx
 │       ├── auth/             Login, signup, email verify, password reset, guest join
-│       ├── match/            Create, lobby, game, correction, review, history, detail
+│       ├── match/            Create, solo, split, game, correction, review, history, detail
 │       ├── child/            Child list, stats, match history, link-to-parent
-│       └── homework/         Capture, processing, session viewer
+│       └── homework/         Capture, processing, session viewer, chat (full-screen AI tutor)
 │
 └── shared/                   Shared TypeScript types (workspace package)
 ```
@@ -199,45 +199,38 @@ quizrope/
 
 ## AI Architecture
 
-### Question Generation (LangGraph)
-Each match triggers a `StateGraph` with a single `generateQuestions` node backed by Gemini Flash. The graph uses a **MongoDB checkpoint saver** keyed by `matchId` as the thread ID. This means:
+### Question Generation (LangGraph & Gemini 2.5 Flash)
+Each match triggers a `StateGraph` with a single `generateQuestions` node backed by Gemini 2.5 Flash (`gemini-2.5-flash`). Mock question fallbacks have been removed to guarantee strictly live, tailored questions. The graph uses a **MongoDB checkpoint saver** keyed by `matchId` as the thread ID:
 - Gemini sees the full conversation history of prior question batches for the same match
 - Follow-up rounds are aware of what was already generated, eliminating duplicates
 - State is persisted in MongoDB and survives server restarts
+- **LaTeX Math Sanitization**: Questions containing mathematical formulas (`\frac`, `\times`, `\ge`, `\le`, `\sqrt`) pass through a specialized character-by-character JSON sanitizer (`backend/src/common/utils/json-sanitizer.ts`) before parsing, preventing JSON escape errors while preserving valid structural whitespace.
 
 ### Homework Analysis (Gemini Vision)
-The parent's photo is sent as a base64 image to Gemini. A structured prompt instructs the model to return a JSON object with `title`, `subject`, `topics`, and `answers_markdown`. The markdown includes step-by-step K-12-level explanations for every question on the page. Analysis runs async — the session starts in `PROCESSING` status and transitions to `READY` when complete.
+The parent's or guest's photo is sent as a base64 image to Gemini 2.5 Flash. A structured prompt instructs the model to return a JSON object with `title`, `subject`, `topics`, and `answers_markdown`. The markdown includes step-by-step K-12-level explanations for every question on the page. Analysis runs async for registered parents and synchronously for guests.
+- **Auto-Repair Parser**: If the model finishes generating answers but truncates before emitting the closing quote or braces, `extractJsonObject` auto-terminates the string and closes all open braces so valid analysis is never discarded.
 
-### Homework Chat (Context Engineering)
-The homework chat is a standard turn-based AI tutor. To prevent the prompt from growing unbounded:
-1. The last 6 messages are always sent to Gemini raw (recent context)
-2. When 10 or more messages have accumulated beyond the last summary, a summarization pass runs: Gemini condenses the older messages into a dense factual summary
-3. The summary is stored in `chatSummary` on the session document and `summarizedMessageCount` is advanced
-4. On every chat turn, the full context sent to Gemini is: `[chatSummary] + [last N unsummarized messages]`
+### Homework Chat (Live Streaming & Context Engineering)
+The homework chat is a dedicated full-screen tutor (`/homework/chat`):
+1. **Live Token Streaming**: Tokens stream in real time over Socket.IO (`homework:token`) directly into native text bubbles with an animated typing cursor, switching to rich KaTeX Markdown (`react-native-enriched-markdown`) once complete.
+2. **Safe Disconnections**: The backend gracefully captures `AbortSignal` events on socket disconnects, avoiding unhandled stream exceptions or server restarts.
+3. **Context Engineering**: To prevent the prompt from growing unbounded over long conversations, a rolling summarization pass condenses older messages into `chatSummary` while retaining the most recent turns in full.
 
 ---
 
 ## Game Flow
 
-### Solo / Split Screen (Local)
+### Solo & Split Screen (Offline & Local)
 ```
-Parent configures match → createMatch (API) → navigate to /match/game
-  → Load questions from match.questions[]
-  → 15s countdown per question (per player in splitscreen)
-  → On answer: submitAnswer (API, best-effort) → rope animation
-  → After maxRounds: advanceQuestion returns gameOver=true
-  → completeMatch (API) → GameEndOverlay
-  → Optional: navigate to /match/review/:childId
-```
-
-### Online Multiplayer (WebSocket)
-```
-Parent creates match → lobby (WS: match:join)
-  → Children join via code/QR (WS: match:join)
-  → Host starts → server sends game:question events
-  → Each answer: WS game:answer → server broadcasts result
-  → Server auto-advances on timeout or all players answered
-  → game:end broadcast → GameEndOverlay
+User selects subject, difficulty & rounds → createMatch / generateGuestMatch (API)
+  → navigate to /match/game (loads questions directly onto the device)
+  → 30s countdown timer per question
+  → On answer: local state updates rope position & streak, emits sound & haptic feedback
+  → In splitscreen: head-to-head on the same screen (first correct answer wins the round)
+  → In solo: single player answering with Mascot Buddy encouragement
+  → Submits answers best-effort to backend (or SQLite if guest)
+  → After maxRounds: displays GameEndOverlay with final winner & stats
+  → Complete review and step-by-step corrections available immediately
 ```
 
 ---

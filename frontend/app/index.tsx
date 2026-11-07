@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { usePortrait } from "../src/hooks/useOrientation";
 import { useGameStore } from "../src/stores/gameStore";
+import { apiService } from "../src/services/api";
 import {
   LanguageSelector,
   FlashingGlobeButton,
@@ -238,6 +239,10 @@ export default function RoleSelectScreen() {
               }
               onPress={() => {
                 if (guestProfile) {
+                  const state = useGameStore.getState();
+                  if (state.ghostToken) {
+                    apiService.setGhostToken(state.ghostToken);
+                  }
                   loginAsGuest();
                   router.replace("/home");
                 } else {

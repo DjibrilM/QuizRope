@@ -109,6 +109,7 @@ export function useHomeworkChat(sessionId: string, guestContext?: string) {
       });
 
       socket.on("homework:error", (err: string) => {
+        console.error("🚨 [HomeworkChat Socket Error]:", err);
         setStreaming(false);
         bufferRef.current = "";
         setMessages((prev) => [
@@ -183,6 +184,7 @@ export function useHomeworkChat(sessionId: string, guestContext?: string) {
     });
 
     socket.on("homework:error", (err: string) => {
+      console.error("🚨 [HomeworkChat Socket Error]:", err);
       setStreaming(false);
       bufferRef.current = "";
       setMessages((prev) => [

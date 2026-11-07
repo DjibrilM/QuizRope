@@ -288,13 +288,14 @@ export default function SplitMatchScreen() {
         },
       });
     } catch (error: any) {
+      console.error("🚨 [SplitMatch Create Error]:", error);
       setCreatingMatch(false);
       if (error?.message === "CONTEXT_NOT_RELATED") {
         setContextError(t("match:solo.contextNotRelated"));
       } else {
         showError(
           t("common:errors.somethingWentWrong"),
-          t("match:create.createFailed"),
+          error?.message || t("match:create.createFailed"),
         );
       }
     }

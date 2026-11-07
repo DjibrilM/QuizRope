@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useGameOrientation } from "../../src/hooks/useOrientation";
 import { useGameStore } from "../../src/stores/gameStore";
-import { socketService } from "../../src/services/socket";
 import { soundService } from "../../src/services/sound";
 import { hapticsService } from "../../src/services/haptics";
 import { apiService } from "../../src/services/api";
@@ -59,7 +58,6 @@ export default function GameScreen() {
 
   const isSoloMode = currentMatch?.gameMode === "solo";
   const isSplitscreen = currentMatch?.gameMode === "splitscreen";
-  const isLocalMode = isSoloMode || isSplitscreen;
 
   const questionsRef = useRef<StoreQuestion[]>(FALLBACK_QUESTIONS);
   const correctCountRef = useRef({ left: 0, right: 0 });
@@ -82,7 +80,6 @@ export default function GameScreen() {
   const startTimerRef = useRef<(() => void) | null>(null);
 
   const startTimer = useCallback(() => {
-    if (!isLocalMode) return;
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -99,7 +96,7 @@ export default function GameScreen() {
         handleTimeoutRef.current?.();
       }
     }, 1000);
-  }, [setTimeRemaining, isSplitscreen]);
+  }, [setTimeRemaining]);
 
   startTimerRef.current = startTimer;
 
@@ -108,99 +105,66 @@ export default function GameScreen() {
     setTeamScores({ left: 0, right: 0 });
     clearCorrection();
 
-    const socket = socketService.getSocket();
-
-    if (!isLocalMode && socket?.connected) {
-      socket.emit("match:join", { matchId, playerId: "game-player", teamSide: "LEFT" });
-      socket.on("game:question", (data: unknown) => {
-        setCurrentQuestion(data as StoreQuestion);
-        setSelectedAnswerLeft(null);
-        setSelectedAnswerRight(null);
-        setAllAnswered(false);
-        setShowResult(false);
-      });
-      socket.on("game:score-update", (data: unknown) => {
-        const d = data as { left: number; right: number };
-        setTeamScores(d);
-      });
-      socket.on("game:round-result", (data: unknown) => {
-        setRoundResult(data as StoreRoundResult);
-        setShowResult(true);
-      });
-      socket.on("game:timer", (data: unknown) => {
-        const d = data as { timeRemaining: number };
-        setTimeRemaining(d.timeRemaining);
-      });
-      socket.on("game:end", (data: unknown) => {
-        setGameEndResult(data as typeof gameEndResult);
-        setShowGameEnd(true);
-        soundService.play("gameEnd");
-        hapticsService.heavy();
-      });
-    } else {
-      const loadQuestionsAndStart = async () => {
-        try {
-          if (matchId) {
-            // Guest: questions are already in the store (set by solo.tsx/split.tsx)
-            const storeQuestions = (currentMatch as any)?.questions;
-            let fetched: StoreQuestion[];
-            if (userRole === "guest" && storeQuestions?.length > 0) {
-              fetched = storeQuestions
-                .filter((q: any) => q?.text && Array.isArray(q.options))
-                .map((q: any) =>
-                  shuffleOptions({
-                    id: q._id || q.id || "",
-                    text: q.text,
-                    options: q.options,
-                    correctIndex: q.correctIndex,
-                    explanation: q.explanation || "",
-                    subject: q.subject || "",
-                  }),
-                );
-            } else {
-              const match = (await apiService.getMatch(matchId as string)) as any;
-              fetched = (match?.questions || [])
-                .filter((q: any) => q?.text && Array.isArray(q.options))
-                .map((q: any) =>
-                  shuffleOptions({
-                    id: q._id || q.id || "",
-                    text: q.text,
-                    options: q.options,
-                    correctIndex: q.correctIndex,
-                    explanation: q.explanation || "",
-                    subject: q.subject || "",
-                  }),
-                );
-            }
-            if (fetched.length > 0) {
-              questionsRef.current = fetched;
-              setCurrentQuestion(fetched[0]);
-            } else {
-              setCurrentQuestion(FALLBACK_QUESTIONS[0]);
-            }
+    const loadQuestionsAndStart = async () => {
+      try {
+        if (matchId) {
+          // Guest: questions are already in the store (set by solo.tsx/split.tsx)
+          const storeQuestions = (currentMatch as any)?.questions;
+          let fetched: StoreQuestion[];
+          if (userRole === "guest" && storeQuestions?.length > 0) {
+            fetched = storeQuestions
+              .filter((q: any) => q?.text && Array.isArray(q.options))
+              .map((q: any) =>
+                shuffleOptions({
+                  id: q._id || q.id || "",
+                  text: q.text,
+                  options: q.options,
+                  correctIndex: q.correctIndex,
+                  explanation: q.explanation || "",
+                  subject: q.subject || "",
+                }),
+              );
+          } else {
+            const match = (await apiService.getMatch(matchId as string)) as any;
+            fetched = (match?.questions || [])
+              .filter((q: any) => q?.text && Array.isArray(q.options))
+              .map((q: any) =>
+                shuffleOptions({
+                  id: q._id || q.id || "",
+                  text: q.text,
+                  options: q.options,
+                  correctIndex: q.correctIndex,
+                  explanation: q.explanation || "",
+                  subject: q.subject || "",
+                }),
+              );
+          }
+          if (fetched.length > 0) {
+            questionsRef.current = fetched;
+            setCurrentQuestion(fetched[0]);
           } else {
             setCurrentQuestion(FALLBACK_QUESTIONS[0]);
           }
-        } catch {
+        } else {
           setCurrentQuestion(FALLBACK_QUESTIONS[0]);
         }
-        startTimerRef.current?.();
-      };
-      loadQuestionsAndStart();
-    }
+      } catch {
+        setCurrentQuestion(FALLBACK_QUESTIONS[0]);
+      }
+      startTimerRef.current?.();
+    };
+    loadQuestionsAndStart();
 
     return () => {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      if (resultTimeoutRef.current) { clearTimeout(resultTimeoutRef.current); resultTimeoutRef.current = null; }
-      setBuddyVisible(false);
-      const s = socketService.getSocket();
-      if (s) {
-        s.off("game:question");
-        s.off("game:score-update");
-        s.off("game:round-result");
-        s.off("game:timer");
-        s.off("game:end");
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
+      if (resultTimeoutRef.current) {
+        clearTimeout(resultTimeoutRef.current);
+        resultTimeoutRef.current = null;
+      }
+      setBuddyVisible(false);
     };
   }, []);
 
@@ -297,7 +261,6 @@ export default function GameScreen() {
   );
 
   const handleTimeout = useCallback(() => {
-    if (!isLocalMode) return;
     const soloAnswered = isSoloMode && selectedAnswerLeft !== null;
     const splitAnswered = !isSoloMode && selectedAnswerLeft !== null && selectedAnswerRight !== null;
     if (soloAnswered || splitAnswered) return;
@@ -485,9 +448,6 @@ export default function GameScreen() {
         onPress: () => {
           if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
           if (resultTimeoutRef.current) { clearTimeout(resultTimeoutRef.current); resultTimeoutRef.current = null; }
-          if (!isSoloMode) {
-            socketService.getSocket()?.emit("game:abandon", { matchId, playerId: "mock-player" });
-          }
           const roundsPlayed = currentRound - 1;
           if (userRole === "guest" && matchId) {
             guestDb.updateMatch(matchId as string, { status: 'ABANDONED', roundsPlayed }).catch(() => {});

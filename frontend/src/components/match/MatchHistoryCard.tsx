@@ -62,13 +62,13 @@ export function MatchHistoryCard({ match, onPress }: MatchHistoryCardProps) {
               fontFamily: FONTS.bodySemiBold,
               color: match.status === "IN_PROGRESS"
                 ? "#F59E0B"
-                : match.status === "ABANDONED"
+                : (match.status as string) === "ABANDONED" || match.status === "CANCELLED"
                   ? "#EF4444"
                   : "#7B6B8A",
             }}>
               {match.status === "IN_PROGRESS"
                 ? t("match:history.inProgress")
-                : match.status === "ABANDONED"
+                : (match.status as string) === "ABANDONED" || match.status === "CANCELLED"
                   ? t("match:history.abandoned")
                   : t("match:history.waiting")}
             </Text>

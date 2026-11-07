@@ -13,9 +13,11 @@ import { HomeworkChat } from './schemas/homework-chat.schema';
 import { Child } from '../children/schemas/child.schema';
 import { GEMINI_MODEL } from '../constants';
 import { HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { sanitizeJson } from '../common/utils/json-sanitizer';
 
 /**
  * Surgical extraction of the first well-formed JSON object from a string.
+ * Automatically recovers from LLM output truncation or omitted closing quotes/braces.
  */
 function extractJsonObject(text: string): string | null {
   const start = text.indexOf('{');
@@ -37,45 +39,24 @@ function extractJsonObject(text: string): string | null {
       if (depth === 0) return text.slice(start, i + 1); 
     }
   }
-  return null;
-}
 
-/**
- * Fixes common JSON escape errors in AI-generated LaTeX strings.
- * AI models often emit single backslashes (e.g. \frac, \(, \[) inside JSON strings,
- * which are invalid JSON. This utility doubles lone backslashes while leaving
- * already-valid escape sequences (\\, \", \/, \b, \f, \n, \r, \t, \uXXXX) untouched.
- *
- * The previous regex approach had a bug: it processed backslashes one at a time, so
- * an already-valid \\section* would be corrupted to \\\section* (the second \ gets
- * doubled because it's followed by 's'). The character-by-character approach below
- * consumes valid escape sequences as atomic units, avoiding that pitfall.
- */
-function fixJsonEscapes(jsonStr: string): string {
-  let result = '';
-  let i = 0;
-  while (i < jsonStr.length) {
-    if (jsonStr[i] !== '\\') {
-      result += jsonStr[i++];
-      continue;
+  // Model finished generating or was truncated without closing quote/brace:
+  if (depth > 0) {
+    let repaired = text.slice(start).trimEnd();
+    if (repaired.endsWith('```')) {
+      repaired = repaired.slice(0, -3).trimEnd();
     }
-    const next = jsonStr[i + 1];
-    if (next === '\\' || next === '"' || next === '/' ||
-        next === 'b' || next === 'f' || next === 'n' || next === 'r' || next === 't') {
-      // Valid 2-char escape — keep both chars and advance past them
-      result += jsonStr[i] + next;
-      i += 2;
-    } else if (next === 'u' && /^[0-9a-fA-F]{4}$/.test(jsonStr.slice(i + 2, i + 6))) {
-      // Valid \uXXXX unicode escape — keep all 6 chars
-      result += jsonStr.slice(i, i + 6);
-      i += 6;
-    } else {
-      // Lone (invalid) backslash — double it so JSON.parse accepts it
-      result += '\\\\';
-      i += 1; // consume only the backslash; the next char is processed on the next iteration
+    if (inString) {
+      repaired += '"';
     }
+    while (depth > 0) {
+      repaired += '\n}';
+      depth--;
+    }
+    return repaired;
   }
-  return result;
+
+  return null;
 }
 
 const HOMEWORK_PROMPT = `You are an encouraging K-12 homework tutor at QuizRope.
@@ -99,7 +80,8 @@ RULES for answers_markdown:
    - ONLY use $ ... $ for inline math and $$ ... $$ for display/block math for complex formulas (fractions, square roots, powers, exponents, variables).
    - Use PLAIN TEXT for simple arithmetic (e.g., "10 + 10 = 20").
    - Ensure square roots, fractions, and symbols are clearly written in standard LaTeX.
-3. **Tone**: Warm, encouraging, and simple. Explain concepts clearly before showing the math.`;
+3. **Tone**: Warm, encouraging, and simple. Explain concepts clearly before showing the math.
+4. **CRITICAL JSON INTEGRITY**: Keep the response thorough but concise so it stays comfortably within token boundaries. Always ensure the JSON string is properly closed with a quote and the JSON object is terminated with "\\n}" inside markdown fences.`;
 
 interface GeminiHomeworkResult {
   title: string;
@@ -148,7 +130,10 @@ export class HomeworkService {
 
     this.runAnalysis(session._id.toString(), imageBase64, mimeType).catch(
       async (err) => {
-        this.logger.error(`Homework analysis failed for ${session._id}:`, err.message);
+        this.logger.error(
+          `\n❌ Homework analysis background task failed for ${session._id}: ${err.message}`,
+          err.stack,
+        );
         await this.sessionModel.findByIdAndUpdate(session._id, {
           status: 'FAILED',
           errorMessage: err.message,
@@ -197,7 +182,13 @@ export class HomeworkService {
         }),
       ]);
     } catch (err: any) {
-      this.logger.error(`[Gemini] Homework analysis invoke failed session=${sessionId}: ${err.message}`, err.stack);
+      this.logger.error(
+        `\n❌ [Gemini] Homework analysis invoke failed session=${sessionId}:\n` +
+          `Error: ${err.message}\n` +
+          `Status: ${err.status || err.code || 'UNKNOWN'}\n` +
+          `Details: ${JSON.stringify(err.response?.data || err.cause || err)}\n`,
+        err.stack,
+      );
       throw err;
     }
 
@@ -208,16 +199,21 @@ export class HomeworkService {
 
     const extracted = extractJsonObject(text);
     if (!extracted) {
-      this.logger.error(`[Gemini] No JSON object in response session=${sessionId}: ${text.slice(0, 200)}`);
-      throw new Error(`Gemini returned invalid response: ${text.slice(0, 200)}`);
+      this.logger.error(
+        `\n❌ [Gemini] No JSON object in response session=${sessionId}.\nRaw text received:\n${text}\n`,
+      );
+      throw new Error(`Gemini returned invalid response: ${text.slice(0, 300)}`);
     }
 
     let result: GeminiHomeworkResult;
     try {
-      const sanitized = fixJsonEscapes(extracted);
+      const sanitized = sanitizeJson(extracted);
       result = JSON.parse(sanitized);
     } catch (err: any) {
-      this.logger.error(`[Gemini] Invalid JSON parse session=${sessionId}: ${extracted.slice(0, 200)}`);
+      this.logger.error(
+        `\n❌ [Gemini] Invalid JSON parse session=${sessionId}: ${err.message}\nRaw JSON candidate:\n${extracted}\n`,
+        err.stack,
+      );
       throw new Error(`Invalid JSON format: ${err.message}`);
     }
 
@@ -438,23 +434,34 @@ ${conversationText}`;
         }),
       ]);
     } catch (err: any) {
-      this.logger.error(`[Gemini] Guest stateless analysis invoke failed: ${err.message}`, err.stack);
+      this.logger.error(
+        `\n❌ [Gemini] Guest stateless analysis invoke failed:\n` +
+          `Error: ${err.message}\n` +
+          `Status: ${err.status || err.code || 'UNKNOWN'}\n` +
+          `Details: ${JSON.stringify(err.response?.data || err.cause || err)}\n`,
+        err.stack,
+      );
       throw err;
     }
 
     const text = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
     const extracted = extractJsonObject(text);
     if (!extracted) {
-      this.logger.error(`[Gemini] Guest stateless analysis — no JSON object: ${text.slice(0, 200)}`);
-      throw new Error(`Gemini returned invalid response: ${text.slice(0, 200)}`);
+      this.logger.error(
+        `\n❌ [Gemini] Guest stateless analysis — no JSON object.\nRaw text received:\n${text}\n`,
+      );
+      throw new Error(`Gemini returned invalid response: ${text.slice(0, 300)}`);
     }
 
     let result: GeminiHomeworkResult;
     try {
-      const sanitized = fixJsonEscapes(extracted);
+      const sanitized = sanitizeJson(extracted);
       result = JSON.parse(sanitized);
     } catch (err: any) {
-      this.logger.error(`[Gemini] Guest stateless analysis — invalid JSON: ${extracted.slice(0, 200)}`);
+      this.logger.error(
+        `\n❌ [Gemini] Guest stateless analysis — invalid JSON: ${err.message}\nRaw JSON candidate:\n${extracted}\n`,
+        err.stack,
+      );
       throw new Error(`Invalid JSON format: ${err.message}`);
     }
 
@@ -516,7 +523,13 @@ STRICT RULES — follow all of these without exception:
     try {
       response = await model.invoke(msgs);
     } catch (err: any) {
-      this.logger.error(`[Gemini] Guest chat invoke failed: ${err.message}`, err.stack);
+      this.logger.error(
+        `\n❌ [Gemini] Guest chat invoke failed:\n` +
+          `Error: ${err.message}\n` +
+          `Status: ${err.status || err.code || 'UNKNOWN'}\n` +
+          `Details: ${JSON.stringify(err.response?.data || err.cause || err)}\n`,
+        err.stack,
+      );
       throw err;
     }
 
@@ -583,11 +596,33 @@ STRICT RULES — follow all of these without exception:
       new HumanMessage(message),
     ];
 
-    const stream = await model.stream(msgs, signal ? ({ signal } as any) : undefined);
-    for await (const chunk of stream) {
-      if (signal?.aborted) break;
-      const token = typeof chunk.content === 'string' ? chunk.content : '';
-      if (token) yield token;
+    try {
+      const stream = await model.stream(msgs, signal ? ({ signal } as any) : undefined);
+      for await (const chunk of stream) {
+        if (signal?.aborted) break;
+        const token = typeof chunk.content === 'string' ? chunk.content : '';
+        if (token) yield token;
+      }
+    } catch (err: any) {
+      // Normal cancellation / client disconnect — don't treat as an unexpected error
+      if (
+        signal?.aborted ||
+        err.name === 'AbortError' ||
+        err.message?.includes('aborted') ||
+        err.message?.includes('reading from the stream')
+      ) {
+        this.logger.log('[Gemini] guestChatStream aborted cleanly by client.');
+        return;
+      }
+
+      this.logger.error(
+        `\n❌ [Gemini] guestChatStream failed:\n` +
+          `Error: ${err.message}\n` +
+          `Status: ${err.status || err.code || 'UNKNOWN'}\n` +
+          `Details: ${JSON.stringify(err.response?.data || err.cause || err)}\n`,
+        err.stack,
+      );
+      throw err;
     }
   }
 
@@ -606,7 +641,10 @@ STRICT RULES — follow all of these without exception:
 
     this.runAnalysis(session._id.toString(), imageBase64, mimeType).catch(
       async (err) => {
-        this.logger.error(`Ghost homework analysis failed for ${session._id}:`, err.message);
+        this.logger.error(
+          `\n❌ Ghost homework analysis background task failed for ${session._id}: ${err.message}`,
+          err.stack,
+        );
         await this.sessionModel.findByIdAndUpdate(session._id, {
           status: 'FAILED',
           errorMessage: err.message,

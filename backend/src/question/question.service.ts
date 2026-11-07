@@ -1,10 +1,15 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  BadGatewayException,
+  ServiceUnavailableException,
+  Injectable,
+  Logger,
+} from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Question } from "./schemas/question.schema";
 import { isGeminiConfigured } from "../config/gemini.config";
-import { invokeQuestionGraph, validateContext } from "./question.graph";
-import { MOCK_QUESTIONS } from "./mock-questions";
+import { invokeQuestionGraph } from "./question.graph";
 
 @Injectable()
 export class QuestionProviderService {
@@ -15,8 +20,8 @@ export class QuestionProviderService {
   ) {}
 
   /**
-   * @param threadId  Unique ID per match/session — the graph uses this to
-   *                  persist conversation history so Gemini never repeats questions.
+   * @param threadId Unique ID per match/session — the graph uses this to
+   * persist conversation history so Gemini never repeats questions.
    */
   async getQuestions(
     subject: string,
@@ -26,53 +31,48 @@ export class QuestionProviderService {
     context?: string,
     language?: string,
   ): Promise<Question[]> {
-    if (context?.trim() && isGeminiConfigured) {
-      const verdict = await validateContext(subject, context.trim());
-      if (verdict === "not_related") {
-        throw new BadRequestException("CONTEXT_NOT_RELATED");
-      }
-    }
-
-    console.log(isGeminiConfigured);
-
-    if (isGeminiConfigured) {
-      try {
-        console.log(
-          `\n[Gemini] Starting AI generation for thread=${threadId} count=${count}`,
-        );
-        const questions = await this.generateWithGraph(
-          subject,
-          difficulty,
-          count,
-          threadId,
-          context,
-          language,
-        );
-
-        return questions;
-      } catch (error: any) {
-        if (error instanceof BadRequestException) throw error;
-        const geminiDetails =
-          error?.response?.data ||
-          error?.response ||
-          "No additional response data";
-        console.error(
-          `\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n` +
-            `[Gemini] COMPLETELY FAILED. FALLING BACK TO MOCKS.\n` +
-            `subject=${subject} difficulty=${difficulty} count=${count} thread=${threadId ?? "none"}\n` +
-            `Error: ${error.message}\n` +
-            `Details: ${JSON.stringify(geminiDetails)}\n` +
-            `XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n`,
-          error.stack,
-        );
-      }
-    } else {
-      console.log(
-        "Falling back to mock questions (Gemini not configured or failed)",
+    if (!isGeminiConfigured) {
+      this.logger.error("Gemini is not configured — refusing to generate questions.");
+      throw new ServiceUnavailableException(
+        "AI question generation is unavailable: GEMINI_API_KEY is not configured.",
       );
     }
 
-    return this.getMockQuestions(subject, difficulty, count);
+    try {
+      this.logger.log(
+        `[Gemini] Starting AI question generation: subject=${subject} difficulty=${difficulty} count=${count} thread=${threadId}`,
+      );
+      const questions = await this.generateWithGraph(
+        subject,
+        difficulty,
+        count,
+        threadId,
+        context,
+        language,
+      );
+
+      if (!questions || questions.length === 0) {
+        throw new BadGatewayException("Gemini returned an empty list of questions.");
+      }
+
+      return questions;
+    } catch (error: any) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ServiceUnavailableException ||
+        error instanceof BadGatewayException
+      ) {
+        throw error;
+      }
+
+      this.logger.error(
+        `[Gemini] Question generation failed: ${error.message}`,
+        error.stack,
+      );
+      throw new BadGatewayException(
+        `Failed to reach or generate questions from Gemini AI: ${error.message}`,
+      );
+    }
   }
 
   private async generateWithGraph(
@@ -83,7 +83,6 @@ export class QuestionProviderService {
     context?: string,
     language?: string,
   ): Promise<Question[]> {
-    // Use match ID as thread, or generate a one-off thread
     const thread = threadId || `oneoff-${Date.now()}`;
 
     const parsed = await invokeQuestionGraph(
@@ -94,9 +93,6 @@ export class QuestionProviderService {
       context,
       language,
     );
-
-    console.log("Generating questions via LangGraph/Gemini");
-    console.log(parsed);
 
     const questions = await Promise.all(
       parsed.map((q: any) =>
@@ -109,44 +105,9 @@ export class QuestionProviderService {
       ),
     );
 
-    console.log("Generated questions:", questions);
-
     this.logger.log(
       `Generated ${questions.length} questions via LangGraph/Gemini (thread: ${thread})`,
     );
-    return questions;
-  }
-
-  private async getMockQuestions(
-    subject: string,
-    difficulty: string,
-    count: number,
-  ): Promise<Question[]> {
-    console.log("Generating mock questions");
-    let filtered = MOCK_QUESTIONS.filter(
-      (q) =>
-        q.subject === subject.toUpperCase() &&
-        q.difficulty === difficulty.toUpperCase(),
-    );
-
-    if (filtered.length < count) {
-      filtered = MOCK_QUESTIONS.filter(
-        (q) => q.subject === subject.toUpperCase(),
-      );
-    }
-
-    if (filtered.length < count) {
-      filtered = [...MOCK_QUESTIONS];
-    }
-
-    const shuffled = filtered.sort(() => Math.random() - 0.5).slice(0, count);
-
-    const questions = await Promise.all(
-      shuffled.map((q) =>
-        this.questionModel.create({ ...q, generatedBy: "mock" }),
-      ),
-    );
-
     return questions;
   }
 
@@ -170,66 +131,52 @@ export class QuestionProviderService {
       explanation: string;
     }[]
   > {
-    if (context?.trim() && isGeminiConfigured) {
-      const verdict = await validateContext(subject, context.trim());
-      if (verdict === "not_related") {
-        throw new BadRequestException("CONTEXT_NOT_RELATED");
-      }
-    }
-
-    if (isGeminiConfigured) {
-      try {
-        const thread = `guest-${Date.now()}`;
-        const parsed = await invokeQuestionGraph(
-          subject,
-          difficulty,
-          count,
-          thread,
-          context,
-          language,
-        );
-        return parsed.map((q: any) => ({
-          text: q.text,
-          options: q.options,
-          correctIndex: q.correctIndex,
-          subject: subject.toUpperCase(),
-          difficulty: difficulty.toUpperCase(),
-          explanation: q.explanation || "",
-        }));
-      } catch (error) {
-        if (error instanceof BadRequestException) throw error;
-        this.logger.error(
-          `LangGraph/Gemini failed for guest (subject=${subject} difficulty=${difficulty} count=${count}): ${error.message}`,
-          error.stack,
-        );
-      }
-    }
-
-    // Fall back to mock questions (raw, not persisted)
-    this.logger.warn(
-      "generateRaw falling back to mock questions (Gemini not configured or failed)",
-    );
-    let filtered = MOCK_QUESTIONS.filter(
-      (q) =>
-        q.subject === subject.toUpperCase() &&
-        q.difficulty === difficulty.toUpperCase(),
-    );
-
-    if (filtered.length < count)
-      filtered = MOCK_QUESTIONS.filter(
-        (q) => q.subject === subject.toUpperCase(),
+    if (!isGeminiConfigured) {
+      this.logger.error("Gemini is not configured — refusing to generate questions.");
+      throw new ServiceUnavailableException(
+        "AI question generation is unavailable: GEMINI_API_KEY is not configured.",
       );
-    if (filtered.length < count) filtered = [...MOCK_QUESTIONS];
-    return filtered
-      .sort(() => Math.random() - 0.5)
-      .slice(0, count)
-      .map((q) => ({
+    }
+
+    try {
+      const thread = `guest-${Date.now()}`;
+      const parsed = await invokeQuestionGraph(
+        subject,
+        difficulty,
+        count,
+        thread,
+        context,
+        language,
+      );
+
+      if (!parsed || parsed.length === 0) {
+        throw new BadGatewayException("Gemini returned an empty list of questions.");
+      }
+
+      return parsed.map((q: any) => ({
         text: q.text,
         options: q.options,
         correctIndex: q.correctIndex,
-        subject: q.subject,
-        difficulty: q.difficulty,
+        subject: subject.toUpperCase(),
+        difficulty: difficulty.toUpperCase(),
         explanation: q.explanation || "",
       }));
+    } catch (error: any) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ServiceUnavailableException ||
+        error instanceof BadGatewayException
+      ) {
+        throw error;
+      }
+
+      this.logger.error(
+        `[Gemini] Question generation failed for guest: ${error.message}`,
+        error.stack,
+      );
+      throw new BadGatewayException(
+        `Failed to reach or generate questions from Gemini AI: ${error.message}`,
+      );
+    }
   }
 }

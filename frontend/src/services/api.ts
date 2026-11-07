@@ -10,7 +10,7 @@ import type {
   AnswerDetail,
 } from "@shared/types/analytics.types";
 
-const API_URL = "https://quiz-rope.onrender.com";
+const API_URL = (process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3000").replace(/\/$/, "");
 
 console.log(API_URL);
 
@@ -56,17 +56,29 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
+        const method = error.config?.method?.toUpperCase() || "UNKNOWN";
+        const url = error.config?.url || "UNKNOWN";
         const status: number | undefined = error.response?.status;
+        const serverData = error.response?.data;
         const message: string =
-          error.response?.data?.message ||
+          serverData?.message ||
           error.message ||
           "Something went wrong";
 
-        if (status === 401 && this.onUnauthorized) {
+        console.error(
+          `\n🚨 [API Error] [${method}] ${url} -> Status: ${status ?? "NO_RESPONSE"} | Code: ${error.code ?? "NONE"}\n` +
+            `Message: ${message}\n` +
+            (serverData ? `Details: ${JSON.stringify(serverData, null, 2)}\n` : "") +
+            `Stack: ${error.stack || "No client stack"}\n`,
+        );
+
+        const isLoginRequest = typeof url === "string" && url.includes("/auth/login");
+        if (status === 401 && !isLoginRequest && this.onUnauthorized) {
           this.onUnauthorized();
-          return Promise.reject(
-            new Error("Session expired. Please log in again."),
-          );
+          const authErr = new Error("Session expired. Please log in again.");
+          (authErr as any).response = error.response;
+          (authErr as any).status = status;
+          return Promise.reject(authErr);
         }
 
         if (this.onApiError) {
@@ -86,13 +98,17 @@ class ApiService {
           } else if (isServerError) {
             this.onApiError({
               type: "error",
-              title: "Server Error",
-              message: "Something went wrong on our end. Please try again.",
+              title: status === 502 || status === 503 ? "AI Service Error" : "Server Error",
+              message: message || "Something went wrong on our end. Please try again.",
+              duration: 6000,
             });
           }
         }
 
-        return Promise.reject(new Error(message));
+        const apiError = new Error(message);
+        (apiError as any).response = error.response;
+        (apiError as any).status = status;
+        return Promise.reject(apiError);
       },
     );
   }
@@ -384,18 +400,6 @@ class ApiService {
   /** Gets child profile info for a link code without redeeming it. */
   async getLinkInfo(code: string): Promise<LinkInfo> {
     return this.request(`/auth/link-info/${code}`);
-  }
-
-  /** Look up an active match by its 6-character lobby code. */
-  async findMatchByCode(code: string): Promise<{
-    found: boolean;
-    matchId?: string;
-    subject?: string;
-    difficulty?: string;
-    maxRounds?: number;
-    status?: string;
-  }> {
-    return this.request(`/matches/join/${code.toUpperCase()}`);
   }
 
   // Homework Assist

@@ -69,14 +69,24 @@ export class MatchService {
     });
 
     // Generate questions with match ID as threadId for conversation persistence
-    const questions = await this.questionProvider.getQuestions(
-      subject,
-      difficulty,
-      maxRounds,
-      match._id.toString(),
-      context,
-      language,
-    );
+    let questions;
+    try {
+      questions = await this.questionProvider.getQuestions(
+        subject,
+        difficulty,
+        maxRounds,
+        match._id.toString(),
+        context,
+        language,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create match ${match._id}: question generation failed (${error.message})`,
+        error.stack,
+      );
+      await this.matchModel.findByIdAndDelete(match._id);
+      throw error;
+    }
 
     match.questions = questions.map((q) => q._id) as any;
     await match.save();
@@ -122,14 +132,24 @@ export class MatchService {
       questions: [],
     });
 
-    const questions = await this.questionProvider.getQuestions(
-      subject,
-      difficulty,
-      maxRounds,
-      match._id.toString(),
-      context,
-      language,
-    );
+    let questions;
+    try {
+      questions = await this.questionProvider.getQuestions(
+        subject,
+        difficulty,
+        maxRounds,
+        match._id.toString(),
+        context,
+        language,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create match ${match._id}: question generation failed (${error.message})`,
+        error.stack,
+      );
+      await this.matchModel.findByIdAndDelete(match._id);
+      throw error;
+    }
 
     match.questions = questions.map((q) => q._id) as any;
     await match.save();
@@ -186,25 +206,6 @@ export class MatchService {
     if (!match) throw new NotFoundException('Match not found');
     this.logger.log(`Match completed: ${matchId} | winner=${data.winner}`);
     return match;
-  }
-
-  /**
-   * Finds an active match by the 6-character display code shown in the lobby.
-   * The code is the last 6 hex characters of the match's MongoDB ObjectId.
-   */
-  async findByCode(code: string): Promise<Match | null> {
-    const upper = code.toUpperCase();
-    // Search recent non-completed matches to keep the scan small
-    const recent = await this.matchModel
-      .find({ status: { $ne: 'COMPLETED' } })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .exec();
-    return (
-      recent.find(
-        (m) => m._id.toString().slice(-6).toUpperCase() === upper,
-      ) ?? null
-    );
   }
 
   async submitAnswer(
@@ -309,73 +310,6 @@ export class MatchService {
       newRopePosition,
       teamScores: { left: match.teamScoreLeft, right: match.teamScoreRight },
       gameOver: false,
-    };
-  }
-
-  async advanceQuestion(matchId: string): Promise<any> {
-    const match = await this.matchModel
-      .findById(matchId)
-      .populate('questions');
-    if (!match) return null;
-
-    match.currentQuestionIndex += 1;
-    match.rounds = match.currentQuestionIndex;
-
-    // Check if we've run out of questions
-    if (match.currentQuestionIndex >= match.questions.length) {
-      match.status = 'COMPLETED';
-      // Winner = team with higher score (fall back to rope position for ties)
-      match.winner =
-        match.teamScoreLeft > match.teamScoreRight
-          ? 'LEFT'
-          : match.teamScoreRight > match.teamScoreLeft
-            ? 'RIGHT'
-            : match.ropePosition <= 0
-              ? 'LEFT'
-              : 'RIGHT';
-      await match.save();
-      return {
-        gameOver: true,
-        winner: match.winner,
-        teamScores: { left: match.teamScoreLeft, right: match.teamScoreRight },
-      };
-    }
-
-    await match.save();
-
-    const question = match.questions[match.currentQuestionIndex] as any;
-    return {
-      gameOver: false,
-      question: {
-        id: question._id,
-        text: question.text,
-        options: question.options,
-        correctIndex: question.correctIndex,
-        explanation: question.explanation || '',
-        subject: question.subject,
-      },
-      round: match.currentQuestionIndex,
-      maxRounds: match.maxRounds,
-      teamScores: { left: match.teamScoreLeft, right: match.teamScoreRight },
-    };
-  }
-
-  async getCurrentQuestion(matchId: string): Promise<any> {
-    const match = await this.matchModel
-      .findById(matchId)
-      .populate('questions');
-    if (!match) return null;
-
-    const question = match.questions[match.currentQuestionIndex] as any;
-    if (!question) return null;
-
-    return {
-      id: question._id,
-      text: question.text,
-      options: question.options,
-      correctIndex: question.correctIndex,
-      explanation: question.explanation || '',
-      subject: question.subject,
     };
   }
 

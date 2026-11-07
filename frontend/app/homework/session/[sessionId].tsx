@@ -4,7 +4,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,10 +12,6 @@ import { MathMarkdown } from "../../../src/components/common/MathMarkdown";
 import { apiService } from "../../../src/services/api";
 import * as guestDb from "../../../src/services/guestDb";
 import { useGameStore } from "../../../src/stores/gameStore";
-import {
-  HomeworkChatSheet,
-  type ChatSheetRef,
-} from "../../../src/components/homework/HomeworkChatSheet";
 import { HomeworkBottomBar } from "../../../src/components/homework/HomeworkBottomBar";
 import { HomeworkQuizSheet } from "../../../src/components/homework/HomeworkQuizSheet";
 import {
@@ -32,7 +28,6 @@ export default function HomeworkSessionScreen() {
   const { userRole } = useGameStore();
   const isGuest = userRole === "guest";
 
-  const chatSheetRef = useRef<ChatSheetRef>(null);
   const quizSheetRef = useRef<BottomSheetModal>(null);
 
   const { data: session, isLoading: loading } = useQuery({
@@ -43,7 +38,6 @@ export default function HomeworkSessionScreen() {
         : apiService.getHomeworkSession(sessionId),
   });
 
-
   const linkedMatchIds: string[] = session?.linkedMatchIds?.length
     ? session.linkedMatchIds
     : session?.linkedMatchId
@@ -51,7 +45,15 @@ export default function HomeworkSessionScreen() {
       : [];
 
   const openQuizSheet = () => quizSheetRef.current?.present();
-  const openChatSheet = () => chatSheetRef.current?.present();
+  const openChatScreen = () => {
+    router.push({
+      pathname: "/homework/chat",
+      params: {
+        sessionId,
+        ...(isGuest ? { guestContext: session?.answersMarkdown || "" } : {}),
+      },
+    });
+  };
 
   if (loading) {
     return (
@@ -145,7 +147,7 @@ export default function HomeworkSessionScreen() {
       <HomeworkBottomBar
         quizCount={quizCount}
         onOpenQuizSheet={openQuizSheet}
-        onOpenChat={openChatSheet}
+        onOpenChat={openChatScreen}
         bottomInset={insets.bottom}
       />
 
@@ -159,12 +161,6 @@ export default function HomeworkSessionScreen() {
             updatedSession,
           );
         }}
-      />
-
-      <HomeworkChatSheet
-        ref={chatSheetRef}
-        sessionId={sessionId}
-        guestContext={isGuest ? session?.answersMarkdown || "" : undefined}
       />
     </SafeAreaView>
   );

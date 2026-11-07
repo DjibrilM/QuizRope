@@ -84,9 +84,9 @@ export default function SignupScreen() {
   const handleGoogleSignUp = async () => {
     setLoading(true);
     try {
-      if (!firebaseAuthService.isConfigured()) {
+      if (!firebaseAuthService.isGoogleConfigured()) {
         throw new Error(
-          "Authentication is not configured. Please contact support.",
+          "Google Sign-In is not configured. Please sign up with email and password.",
         );
       }
       const { idToken } = await firebaseAuthService.signInWithGoogle();

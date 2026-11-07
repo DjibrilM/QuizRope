@@ -19,6 +19,7 @@ import { hapticsService } from "../../src/services/haptics";
 import { BackButton, ScreenHeader } from "../../src/components/common";
 import { QRScanner } from "../../src/components/device";
 import { FONTS } from "../../src/constants/theme";
+import { extractCodeFromScan } from "../auth/child-join";
 
 export default function LinkToParentScreen() {
   const { t } = useTranslation(["auth", "common", "device"]);
@@ -34,10 +35,8 @@ export default function LinkToParentScreen() {
   const scanEnabled = useRef(true);
 
   const handleLink = useCallback(async (rawCode: string) => {
-    // Extract the 6-char code whether rawCode is the code itself or a deep-link URL
-    const match = rawCode.trim().toUpperCase().match(/[A-Z0-9]{6}/);
-    const trimmed = match ? match[0] : "";
-    if (trimmed.length !== 6) {
+    const cleanCode = extractCodeFromScan(rawCode);
+    if (cleanCode.length !== 6 && cleanCode.length !== 8) {
       setError(t("auth:guest.linkCodeLengthError"));
       return;
     }
@@ -46,7 +45,10 @@ export default function LinkToParentScreen() {
     setError("");
 
     try {
-      const result = await apiService.redeemGuestCode(trimmed);
+      const result =
+        cleanCode.length === 6
+          ? await apiService.redeemGuestCode(cleanCode)
+          : await apiService.getChildToken(cleanCode);
 
       // Set token immediately so all subsequent calls are authenticated
       apiService.setToken(result.token);
@@ -56,9 +58,9 @@ export default function LinkToParentScreen() {
 
       // Establish the child session (sets isAuthenticated + userRole)
       setChildSession({
-        sessionToken: trimmed,
+        sessionToken: cleanCode,
         parentId: result.parentId,
-        childId: result.childId,
+        childId: result.childId || null,
         jwtToken: result.token,
       });
 
@@ -99,8 +101,9 @@ export default function LinkToParentScreen() {
       if (!scanEnabled.current) return;
       scanEnabled.current = false;
       setScanning(false);
-      setCode(data.trim().toUpperCase().slice(0, 6));
-      handleLink(data);
+      const clean = extractCodeFromScan(data);
+      setCode(clean);
+      handleLink(clean);
     },
     [handleLink],
   );
