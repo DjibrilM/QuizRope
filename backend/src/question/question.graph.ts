@@ -90,17 +90,17 @@ async function generateQuestions(state: typeof GraphState.State) {
 
   let parsed: any[];
   try {
-    parsed = JSON.parse(extracted);
+    const sanitized = sanitizeJson(extracted);
+    parsed = JSON.parse(sanitized);
   } catch (firstErr: any) {
     logger.warn(
-      `[Gemini] generateQuestions — initial JSON parse failed (${firstErr.message}), sanitizing LaTeX escapes and control characters...`,
+      `[Gemini] generateQuestions — sanitized JSON parse failed (${firstErr.message}), retrying raw JSON parse...`,
     );
     try {
-      const sanitized = sanitizeJson(extracted);
-      parsed = JSON.parse(sanitized);
+      parsed = JSON.parse(extracted);
     } catch (secondErr: any) {
       logger.error(
-        `\n❌ [Gemini] generateQuestions — JSON parse failed after sanitization: ${secondErr.message}\n` +
+        `\n❌ [Gemini] generateQuestions — JSON parse failed: ${secondErr.message}\n` +
           `Extracted JSON text:\n${extracted}\n`,
         secondErr.stack,
       );
@@ -193,9 +193,9 @@ Schema:
 Rules:
 - Options: 2 to 4 options (4 for short words, 2-3 for longer phrases).
 - Question Text: Concise and clear (under 100 chars).
-- Explanation: Exactly 1-2 friendly, educational sentences explaining why the correct answer is right (max 180 chars). Focus on the core concept.
-- Math: Plain text for basic arithmetic (e.g. 10 + 5 = 15). Use $...$ only for complex math (fractions, exponents, roots).
-- Escape Backslashes in JSON: Always double all backslashes in LaTeX commands inside JSON strings (write "\\frac", "\\times", "\\ge", "\\le", "\\cdot", "\\sqrt", not single backslashes).`,
+- Explanation: 1-2 friendly, educational sentences explaining why the correct answer is right (max 220 chars). Focus on the core concept.
+- Math Formatting: NEVER put a math equation or calculation inline at the end of an explanation sentence. Write the explanation prose first, leave a blank line, and put any equation, formula, or step on its own separate line wrapped in $$ ... $$ (using "\\n\\n$$ ... $$" inside JSON). Use inline $ ... $ only for single isolated variables or symbols in prose (like $x$), and standard LaTeX (\\\\frac, \\\\sqrt, \\\\times) inside math delimiters.
+- Escape Backslashes in JSON: Always double all backslashes in LaTeX commands inside JSON strings (write "\\\\frac", "\\\\times", "\\\\ge", "\\\\le", "\\\\cdot", "\\\\sqrt", not single backslashes).`,
   );
 
   const seed = Math.floor(Math.random() * 999999);

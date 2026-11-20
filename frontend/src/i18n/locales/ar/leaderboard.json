@@ -6,5 +6,12 @@
   "gamesPlayed_one": "{{count}} لعبة",
   "gamesPlayed_other": "{{count}} ألعاب",
   "correct": "صحيح",
-  "accuracy": "الدقة"
+  "accuracy": "الدقة",
+  "yourProfile": "ملفك الشخصي",
+  "tapForStats": "اضغط لعرض إحصائياتك الكاملة",
+  "recentMatches": "المباريات الأخيرة",
+  "bySubject": "حسب المادة",
+  "noMatchesYet": "لم تُلعب أي مباريات بعد",
+  "noSubjectDataYet": "لا توجد بيانات للمواد بعد",
+  "scoreRatio": "النتيجة: {{score}} / {{max}}"
 }

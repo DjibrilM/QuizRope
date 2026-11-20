@@ -15,4 +15,6 @@ export { LanguageSelector } from "./LanguageSelector";
 export { FlashingGlobeButton } from "./FlashingGlobeButton";
 export { Button } from "./Button";
 export { MascotBuddy } from "./MascotBuddy";
+export { BrainMascot, type OrbState } from "./Mascots";
+export { TermsSheet } from "./TermsSheet";
 export { ToastContainer } from "./Toast";

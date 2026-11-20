@@ -6,7 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { I18nManager, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { FloatingSheetPortalProvider } from "../src/components/ui";
 import { useEffect, useCallback, useRef, useState } from "react";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useFonts } from "expo-font";
@@ -19,6 +19,7 @@ import {
   Nunito_600SemiBold,
   Nunito_700Bold,
   Nunito_800ExtraBold,
+  Nunito_900Black,
 } from "@expo-google-fonts/nunito";
 import * as SplashScreen from "expo-splash-screen";
 import { firebaseAuthService } from "../src/services/firebase";
@@ -317,6 +318,7 @@ export default function RootLayout() {
     Nunito_600SemiBold,
     Nunito_700Bold,
     Nunito_800ExtraBold,
+    Nunito_900Black,
   });
 
   // Default the entire app to portrait. Individual screens (game/lobby for parent)
@@ -386,11 +388,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
           <SafeAreaProvider>
-            <ToastProvider>
-              <ApiToastBridge />
-              <ChildSessionWatcher />
-              <NotificationWatcher />
-              <BottomSheetModalProvider>
+            <FloatingSheetPortalProvider>
+              <ToastProvider>
+                <ApiToastBridge />
+                <ChildSessionWatcher />
+                <NotificationWatcher />
                 <StatusBar style="light" />
                 <Stack
                   screenOptions={{
@@ -405,9 +407,14 @@ export default function RootLayout() {
                     headerShadowVisible: false,
                     contentStyle: { backgroundColor: FORTNITE_COLORS.bgDark },
                   }}
-                />
-              </BottomSheetModalProvider>
-            </ToastProvider>
+                >
+                  <Stack.Screen
+                    name="index"
+                    options={{ headerShown: false, title: "" }}
+                  />
+                </Stack>
+              </ToastProvider>
+            </FloatingSheetPortalProvider>
           </SafeAreaProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>

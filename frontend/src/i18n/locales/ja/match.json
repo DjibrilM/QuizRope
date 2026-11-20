@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "ソロ - {{subject}}",
+    "setupTitle": "チャレンジ設定",
+    "setupSubtitle": "難易度、ラウンド数、練習テーマを選択",
     "startButton": "ゲーム開始",
     "contextLabel": "練習をカスタマイズ",
     "contextPlaceholder": "例：平方根、分母が20までの分数…",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "画面分割 · {{subject}}",
+    "setupTitle": "バトル設定",
     "subtitle": "2人プレイ · 同じ端末",
     "ageGroupLabel": "年齢グループ",
     "playersLabel": "プレイヤー",

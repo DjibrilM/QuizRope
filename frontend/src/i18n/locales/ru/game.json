@@ -31,7 +31,42 @@
     "playAgain": "Играть снова",
     "backToHome": "На главную",
     "wellDone": "Отлично!",
-    "finalScore": "Итоговый счёт: {{score}}"
+    "keepPracticing": "Продолжай тренироваться!",
+    "finalScore": "Итоговый счёт: {{score}}",
+    "reviewAnswers": "Разбор ответов"
+  },
+  "buddy": {
+    "streak3": "В ударе! 3 подряд!",
+    "streak5": "Не остановить!",
+    "fast": "Молниеносно!",
+    "timeout": "Время вышло! Соберись на следующем!",
+    "streakLost": "Серия прервалась — не сдавайся!",
+    "wrong1": "Почти! Следующий точно получится!",
+    "wrongStreak": "Не спеши — внимательно читай варианты!",
+    "recovery": "Отличное возвращение!"
+  },
+  "correction": {
+    "title": "Полный разбор",
+    "question": "Вопрос {{number}}",
+    "summary": "{{correct}} / {{total}} верно",
+    "questionsCount": "{{count}} вопросов",
+    "missed": "Ошибки",
+    "questionMap": "Карта вопросов",
+    "avgSpeed": "Сред. {{time}}с",
+    "filterAll": "Все",
+    "filterMissed": "Ошибки",
+    "filterCorrect": "Верные",
+    "statusCorrect": "Верно",
+    "statusWrong": "Ошибка",
+    "statusSkipped": "Время вышло",
+    "perfectFilterTitle": "Без единой ошибки!",
+    "perfectFilterSubtitle": "Все ответы правильные — разбирать ошибки не нужно.",
+    "noCorrectFilterSubtitle": "В этой игре пока нет верных ответов.",
+    "showAll": "Показать все",
+    "explanation": "Объяснение",
+    "skipped": "Время вышло — ответ не дан",
+    "empty": "Нет ответов для разбора",
+    "done": "Готово"
   },
   "scoreboard": {
     "score": "Счёт"

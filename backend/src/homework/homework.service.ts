@@ -13,7 +13,7 @@ import { HomeworkChat } from './schemas/homework-chat.schema';
 import { Child } from '../children/schemas/child.schema';
 import { GEMINI_MODEL } from '../constants';
 import { HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { sanitizeJson } from '../common/utils/json-sanitizer';
+import { sanitizeJson, normalizeEscapedProseNewlines } from '../common/utils/json-sanitizer';
 
 /**
  * Surgical extraction of the first well-formed JSON object from a string.
@@ -59,35 +59,254 @@ function extractJsonObject(text: string): string | null {
   return null;
 }
 
-const HOMEWORK_PROMPT = `You are an encouraging K-12 homework tutor at QuizRope.
-Your task is to analyze the student's homework image and generate a clear, helpful explanation.
+/**
+ * Fallback repair for unescaped double quotes inside JSON string values
+ * (e.g. prose quotes like "hello" or SVG attributes if unconstrained output slips).
+ */
+function repairUnescapedJsonQuotes(raw: string): string {
+  let result = '';
+  let inString = false;
+  let i = 0;
 
-STRICT JSON OUTPUT:
-Return ONLY a valid JSON object inside markdown fences.
+  while (i < raw.length) {
+    const ch = raw[i];
 
-{
-  "title": "Descriptive title",
-  "subject": "MATH|SCIENCE|ENGLISH|HISTORY|GEOGRAPHY",
-  "topics": ["topic1", "topic2"],
-  "answers_markdown": "Full educational explanation here."
+    if (inString && ch === '\\') {
+      result += ch + (raw[i + 1] ?? '');
+      i += 2;
+      continue;
+    }
+
+    if (ch === '"') {
+      if (!inString) {
+        inString = true;
+        result += ch;
+        i++;
+        continue;
+      }
+
+      // Check whether this quote cleanly terminates a JSON string
+      let j = i + 1;
+      while (j < raw.length && /\s/.test(raw[j])) j++;
+      const nextToken = raw[j];
+
+      if (
+        j >= raw.length ||
+        nextToken === ',' ||
+        nextToken === '}' ||
+        nextToken === ']' ||
+        nextToken === ':'
+      ) {
+        inString = false;
+        result += ch;
+      } else {
+        result += '\\"';
+      }
+      i++;
+      continue;
+    }
+
+    result += ch;
+    i++;
+  }
+
+  return result;
 }
 
-RULES for answers_markdown:
-1. **Descriptive, CLEAR Explanations**: Provide a warm, conversational, and highly descriptive educational explanation that assumes you are a friendly tutor talking directly to the child. 
-   - Explain the "why" and "how" behind the concept before showing any steps. Avoid dry list-of-steps.
-   - Use headings (###), **bold text**, and short, friendly paragraphs (1-3 sentences) to keep it manageable but rich. Use bullet points ONLY if truly necessary for a list of items; preferred descriptive prose.
-2. **MATH RENDERING**:
-   - ONLY use $ ... $ for inline math and $$ ... $$ for display/block math for complex formulas (fractions, square roots, powers, exponents, variables).
-   - Use PLAIN TEXT for simple arithmetic (e.g., "10 + 10 = 20").
-   - Ensure square roots, fractions, and symbols are clearly written in standard LaTeX.
-3. **Tone**: Warm, encouraging, and simple. Explain concepts clearly before showing the math.
-4. **CRITICAL JSON INTEGRITY**: Keep the response thorough but concise so it stays comfortably within token boundaries. Always ensure the JSON string is properly closed with a quote and the JSON object is terminated with "\\n}" inside markdown fences.`;
+export const HOMEWORK_MATH_FORMAT_RULES = `- **MATH FORMATTING & SYNTAX (CRITICAL)**:
+  - NEVER place an equation, calculation, or math step on the same line at the end of an explanation sentence (for example, NEVER write "Subtract 2 from both sides then x + 2 = 5" or "We get x + 2 = 5").
+  - ALWAYS write the explanation sentence first, leave a blank line, and place the equation or math expression on its OWN separate display line wrapped in $$ ... $$:
+    Example:
+    Subtract 2 from both sides to isolate $x$:
+
+    $$x + 2 = 5$$
+  - Put EVERY equation, arithmetic step, calculation, formula, fraction, root, or exponent (such as $$x + 2 = 5$$ or $$10 + 10 = 20$$) on its own separate $$ ... $$ line.
+  - Use inline $ ... $ ONLY for isolated single variables or constants mentioned inside prose (such as $x$, $y$, or $\\pi$), never for equations or multi-term expressions.
+  - Inside math delimiters, use clean standard LaTeX (such as \\frac{a}{b}, \\sqrt{x}, \\times, \\div).
+  - Use standard Markdown (### headings, - bullet lists, **bold**) for text formatting, never raw LaTeX document commands like \\section* or \\begin{itemize} or \\textbf.`;
+
+const KID_CALLOUT_GUIDE = `- **KID-FRIENDLY CALLOUT BOXES (Markdown blockquotes)**:
+  Format callouts across TWO lines (short 2-4 word title after the tag on line 1, explanation on line 2 starting with "> "):
+  > [!IDEA] Short Big Idea
+  > Explain WHY the concept works using an everyday analogy (pizza, balance scales, steps).
+  Supported tags: [!IDEA], [!TIP], [!WATCHOUT], [!CHECK], [!EXAMPLE].`;
+
+const CHAT_DIAGRAM_GUIDE = `- **VISUAL DIAGRAMS IN CHAT**: Whenever a visual makes a step click, emit a fenced diagram JSON block on its own lines (use sparingly when truly helpful):
+  - Types: "number_line", "bar_model", "fraction_model", "geometry", "coordinate_grid", "flowchart" ("vertical"|"cycle"|"tree"), "bar_chart", "timeline", "venn", or custom dark-theme "svg".
+  - Allowed "color": "purple" | "mint" | "blue" | "amber" | "pink" | "red".`;
+
+const DIAGRAM_TYPES_GUIDE = `Available visual diagram schemas (pick the clearest one for the topic; keep labels short, kid-friendly, and clear; allowed "color" values are "purple", "mint", "blue", "amber", "pink", "red"):
+- "number_line": { "type": "number_line", "title": "...", "min": -2, "max": 10, "step": 1, "points": [{"value": 2, "label": "Start", "color": "blue", "open": false}], "hops": [{"from": 2, "to": 5, "label": "+3", "color": "purple"}], "range": {"from": 3, "to": 10, "fromOpen": true, "arrowRight": true, "color": "mint"}, "caption": "..." }
+- "fraction_model" or "bar_model": { "type": "fraction_model", "title": "...", "rows": [{"label": "1/2", "total": 2, "filled": 1, "color": "purple"}, {"label": "2/4", "total": 4, "filled": 2, "color": "mint"}], "caption": "..." } OR part-whole bar { "type": "bar_model", "title": "...", "rows": [{"label": "Total = 5", "segments": [{"units": 2, "label": "x (2)", "color": "purple"}, {"units": 3, "label": "+3", "color": "amber"}]}], "caption": "..." }
+- "geometry": { "type": "geometry", "title": "...", "shape": "right_triangle"|"triangle"|"rectangle"|"square"|"circle"|"angle", "degrees": 60, "labels": {"a": "3 cm", "b": "4 cm", "c": "5 cm", "radius": "5 cm", "diameter": "10 cm", "top": "...", "left": "...", "right": "...", "bottom": "...", "angle": "90°", "area": "..."}, "caption": "..." }
+- "coordinate_grid": { "type": "coordinate_grid", "title": "...", "xMin": -4, "xMax": 6, "yMin": -4, "yMax": 6, "points": [{"x": 0, "y": 1, "label": "(0,1)", "color": "mint"}], "lines": [{"points": [[0,1],[2,5]], "label": "y = 2x + 1", "color": "purple"}], "caption": "..." }
+- "flowchart": { "type": "flowchart", "title": "...", "layout": "vertical"|"cycle"|"tree", "nodes": [{"id": "n1", "label": "Short title", "detail": "Kid-friendly clue", "color": "purple"}], "edges": [{"from": "n1", "to": "n2", "label": "-2"}], "caption": "..." }
+  - Use "cycle" (3-6 nodes) for water cycle, life cycle, rock cycle, photosynthesis; "tree" for factor trees, grammar trees, classifications; "vertical" for multi-step thinking processes.
+- "bar_chart": { "type": "bar_chart", "title": "...", "unit": "...", "bars": [{"label": "Item", "value": 12, "color": "blue"}], "caption": "..." }
+- "timeline": { "type": "timeline", "title": "...", "events": [{"date": "1776", "title": "...", "description": "...", "color": "amber"}], "caption": "..." }
+- "venn": { "type": "venn", "title": "...", "sets": [{"title": "Group A", "items": ["..."], "color": "purple"}, {"title": "Group B", "items": ["..."], "color": "mint"}], "overlap": {"title": "Both", "items": ["..."]}, "caption": "..." }
+- "svg": { "type": "svg", "title": "...", "svg": "<svg viewBox='0 0 360 220' xmlns='http://www.w3.org/2000/svg'>...</svg>", "caption": "..." }
+  - Use "svg" ONLY when custom labeled science/geography art is needed (e.g., plant cell organelles, layers of Earth, volcano, circuit, lever, atom, shaded slices). Use single quotes inside SVG attributes, dark-theme friendly bright fills (#A78BFA, #34D399, #60A5FA, #FBBF24, #F472B6, #1B1626 backing, #FFFFFF labels), inline attributes ONLY (NO <script>, NO <style> CSS classes, NO external images), font-size='12', and keep text well spaced cleanly inside viewBox.`;
+
+const HOMEWORK_PROMPT = `You are a warm, extraordinarily clear K-12 tutor at QuizRope teaching children directly.
+Your mission is to analyze the student's homework image and craft a visual, deeply educational mini-lesson that ANY child can understand at a glance.
+
+LANGUAGE RULE:
+Write ALL explanations, headings, callout titles, table cells, and diagram labels in the SAME language written on the homework image (default to clear, friendly English if unclear).
+
+STRICT JSON OUTPUT:
+Return ONLY a single valid raw JSON object (no markdown fences) matching this structure:
+
+{
+  "title": "Short kid-friendly title",
+  "subject": "MATH|SCIENCE|ENGLISH|HISTORY|GEOGRAPHY",
+  "topics": ["topic1", "topic2"],
+  "diagrams": [
+    {
+      "id": "visual1",
+      "type": "flowchart|number_line|fraction_model|bar_model|geometry|coordinate_grid|bar_chart|timeline|venn|svg",
+      "title": "Helpful visual title",
+      "caption": "One sentence explaining what this visual shows"
+    }
+  ],
+  "answers_markdown": "Full rich educational explanation with [[diagram:visual1]] placed right where seeing it helps most."
+}
+
+HOW TO MAKE THE LESSON EXTRAORDINARILY EDUCATIONAL FOR KIDS:
+1. **Start with Intuition (> [!IDEA])**: Begin with a '> [!IDEA]' callout box explaining *what this topic is really about* and *why it works* in simple everyday words + a relatable kid analogy (pizza, game points, balance scale, steps).
+2. **Teach With Visual Diagrams**: Always include **1 to 3 helpful visuals** in the "diagrams" array and embed each one in "answers_markdown" on its own line as [[diagram:visual1]], [[diagram:visual2]], etc., RIGHT where seeing the picture makes the step click!
+${DIAGRAM_TYPES_GUIDE}
+3. **Guided Bite-Sized Steps**:
+   - Use clear headings (### Step 1: ..., ### Step 2: ...) and short 1-3 sentence paragraphs.
+   - Never skip reasoning or dump a bare final answer — explain *why* we take each step before writing the math!
+   - When comparing rules, properties, conversions, vocabulary, or multi-part cases, include a clean Markdown **table** (| Col | Col |).
+4. **Pedagogical Callouts & Review**:
+${KID_CALLOUT_GUIDE}
+   - End with helpful '> [!TIP]', '> [!WATCHOUT]', and '> [!CHECK]' cards so the student retains the concept and knows how to check their own work!
+5. **MATH FORMATTING**:
+${HOMEWORK_MATH_FORMAT_RULES}
+6. **CRITICAL JSON INTEGRITY**: Keep the lesson rich, clear, and well within token bounds so the returned raw JSON object is always valid and complete.`;
+
+export interface HomeworkDiagramPayload {
+  id?: string;
+  type: string;
+  [key: string]: unknown;
+}
 
 interface GeminiHomeworkResult {
   title: string;
   subject: string;
   topics: string[];
+  diagrams?: HomeworkDiagramPayload[];
   answers_markdown: string;
+}
+
+/**
+ * Replaces `[[diagram:id]]` tokens with fenced ```diagram blocks that the mobile
+ * client renders interactively, and appends any unreferenced diagrams.
+ */
+export function injectDiagramsIntoMarkdown(
+  markdown: string,
+  diagrams?: HomeworkDiagramPayload[],
+): string {
+  if (!Array.isArray(diagrams) || diagrams.length === 0) {
+    return markdown;
+  }
+
+  const byId = new Map<string, { idx: number; fence: string }>();
+  const fences: { id?: string; fence: string }[] = [];
+
+  diagrams.forEach((diag, idx) => {
+    if (!diag || typeof diag !== 'object' || typeof diag.type !== 'string') {
+      return;
+    }
+    const { id, ...specWithoutId } = diag;
+    const fence = `\n\n\`\`\`diagram\n${JSON.stringify(specWithoutId)}\n\`\`\`\n\n`;
+    const entry = { id, fence };
+    fences.push(entry);
+    if (typeof id === 'string' && id.trim()) {
+      const normalized = id.trim().toLowerCase();
+      byId.set(normalized, { idx: fences.length - 1, fence });
+    }
+  });
+
+  if (fences.length === 0) return markdown;
+
+  const usedIndices = new Set<number>();
+  let result = (markdown || '').replace(
+    /\[\[\s*diagram\s*:\s*([^\]\s]+)\s*\]\]|\{\{\s*diagram\s*:\s*([^}\s]+)\s*\}\}/gi,
+    (_, idA, idB) => {
+      const key = (idA || idB || '').trim().toLowerCase();
+      const found = byId.get(key);
+      if (found) {
+        usedIndices.add(found.idx);
+        return found.fence;
+      }
+      return '';
+    },
+  );
+
+  const unplaced = fences
+    .filter((_, idx) => !usedIndices.has(idx))
+    .map((f) => f.fence.trim());
+
+  if (unplaced.length > 0) {
+    const appendix = unplaced.join('\n\n');
+    result = result.trim()
+      ? `${result.trim()}\n\n${appendix}`
+      : appendix;
+  }
+
+  return result.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+export function extractStreamChunkText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part;
+      if (part && typeof part === 'object' && part.type === 'text' && typeof part.text === 'string') {
+        return part.text;
+      }
+      return '';
+    })
+    .join('');
+}
+
+export function buildHomeworkChatSystemInstruction(params: {
+  sessionContext: string;
+  subject?: string;
+  language?: string;
+  conciseFollowUp?: boolean;
+}): string {
+  const { sessionContext, subject, language, conciseFollowUp } = params;
+  const subjectLine = subject ? `\nSubject: ${subject}.` : '';
+  const followUpLine = conciseFollowUp
+    ? `\n- **STYLE**: When you ask a follow-up check question at the end, keep the question to ONE short friendly sentence.`
+    : '';
+  const fence = '```';
+
+  return `You are an encouraging K-12 tutor assistant in QuizRope — an educational tug-of-war quiz app for children.
+Your ONLY job is to help the student understand their homework.${subjectLine}
+Homework content for context:
+${sessionContext}
+
+STRICT RULES — follow all of these without exception:
+1. ONLY discuss the student's homework and related school subjects. If asked about anything unrelated, politely decline and redirect to the homework.
+2. NEVER simply give the final answer — always guide, explain, and scaffold so the student actually learns.
+3. NEVER discuss violence, adult content, personal information, politics, religion, or anything inappropriate for children.
+4. NEVER impersonate other people, claim to be human, or role-play as a different AI system.
+5. Keep all language simple, warm, encouraging, and easy for K-12 kids to understand.
+6. If a student mentions personal distress or safety concerns, respond with care and encourage them to talk to a trusted adult.
+
+TEACHING & VISUAL GUIDE:
+- Explain the "why" in plain everyday words with analogies before showing formulas.
+${KID_CALLOUT_GUIDE}
+${CHAT_DIAGRAM_GUIDE}
+- Put diagram JSON inside ${fence}diagram ... ${fence} only when visual structure truly helps.${followUpLine}
+${HOMEWORK_MATH_FORMAT_RULES}
+7. Always respond in the language identified by this BCP-47 code: ${language || 'en'}.`;
 }
 
 @Injectable()
@@ -143,6 +362,81 @@ export class HomeworkService {
 
     return session;
   }
+  private createVisionModel(apiKey: string): ChatGoogleGenerativeAI {
+    return new ChatGoogleGenerativeAI({
+      model: GEMINI_MODEL,
+      apiKey,
+      maxOutputTokens: 8192,
+      temperature: 0.1,
+      json: true,
+      thinkingConfig: { thinkingBudget: 512 },
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ],
+    });
+  }
+
+  private parseHomeworkResult(
+    text: string,
+    contextLabel: string,
+  ): {
+    title: string;
+    subject: string;
+    topics: string[];
+    answersMarkdown: string;
+  } {
+    const extracted = extractJsonObject(text);
+    if (!extracted) {
+      this.logger.error(
+        `\n❌ [Gemini] ${contextLabel} — no JSON object.\nRaw text received:\n${text}\n`,
+      );
+      throw new Error(`Gemini returned invalid response: ${text.slice(0, 300)}`);
+    }
+
+    let result: GeminiHomeworkResult;
+    const sanitized = sanitizeJson(extracted);
+    try {
+      result = JSON.parse(sanitized);
+    } catch (firstErr: any) {
+      try {
+        const repairedQuotes = sanitizeJson(repairUnescapedJsonQuotes(extracted));
+        result = JSON.parse(repairedQuotes);
+        this.logger.warn(
+          `[Gemini] ${contextLabel} recovered from unescaped JSON quotes.`,
+        );
+      } catch (err: any) {
+        this.logger.error(
+          `\n❌ [Gemini] ${contextLabel} — invalid JSON: ${firstErr.message}\nRaw JSON candidate:\n${extracted}\n`,
+          err.stack,
+        );
+        throw new Error(`Invalid JSON format: ${firstErr.message}`);
+      }
+    }
+
+    const validSubjects = ['MATH', 'SCIENCE', 'ENGLISH', 'HISTORY', 'GEOGRAPHY'];
+    const subject = validSubjects.includes(result.subject?.toUpperCase())
+      ? result.subject.toUpperCase()
+      : 'SCIENCE';
+
+    const cleanedMarkdown = normalizeEscapedProseNewlines(
+      result.answers_markdown || '',
+    );
+    const answersMarkdown = injectDiagramsIntoMarkdown(
+      cleanedMarkdown,
+      result.diagrams,
+    );
+
+    return {
+      title: result.title || 'Homework',
+      subject,
+      topics: result.topics || [],
+      answersMarkdown,
+    };
+  }
+
   private async runAnalysis(
     sessionId: string,
     base64: string,
@@ -155,18 +449,7 @@ export class HomeworkService {
 
     this.logger.log(`[Gemini] Invoking homework analysis for session=${sessionId} model=${GEMINI_MODEL}`);
 
-    const model = new ChatGoogleGenerativeAI({
-      model: GEMINI_MODEL,
-      apiKey,
-      maxOutputTokens: 8192,
-      temperature: 0.1,
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      ],
-    });
+    const model = this.createVisionModel(apiKey);
 
     let response: Awaited<ReturnType<typeof model.invoke>>;
     try {
@@ -193,44 +476,25 @@ export class HomeworkService {
     }
 
     const text =
-      typeof response.content === 'string'
+      extractStreamChunkText(response.content) ||
+      (typeof response.content === 'string'
         ? response.content
-        : JSON.stringify(response.content);
+        : JSON.stringify(response.content));
 
-    const extracted = extractJsonObject(text);
-    if (!extracted) {
-      this.logger.error(
-        `\n❌ [Gemini] No JSON object in response session=${sessionId}.\nRaw text received:\n${text}\n`,
-      );
-      throw new Error(`Gemini returned invalid response: ${text.slice(0, 300)}`);
-    }
-
-    let result: GeminiHomeworkResult;
-    try {
-      const sanitized = sanitizeJson(extracted);
-      result = JSON.parse(sanitized);
-    } catch (err: any) {
-      this.logger.error(
-        `\n❌ [Gemini] Invalid JSON parse session=${sessionId}: ${err.message}\nRaw JSON candidate:\n${extracted}\n`,
-        err.stack,
-      );
-      throw new Error(`Invalid JSON format: ${err.message}`);
-    }
-
-    const validSubjects = ['MATH', 'SCIENCE', 'ENGLISH', 'HISTORY', 'GEOGRAPHY'];
-    const subject = validSubjects.includes(result.subject?.toUpperCase())
-      ? result.subject.toUpperCase()
-      : 'SCIENCE';
+    const parsed = this.parseHomeworkResult(
+      text,
+      `Homework analysis session=${sessionId}`,
+    );
 
     await this.sessionModel.findByIdAndUpdate(sessionId, {
       status: 'READY',
-      title: result.title || 'Homework',
-      subject,
-      topics: result.topics || [],
-      answersMarkdown: result.answers_markdown || '',
+      title: parsed.title,
+      subject: parsed.subject,
+      topics: parsed.topics,
+      answersMarkdown: parsed.answersMarkdown,
     });
 
-    this.logger.log(`[Gemini] Homework session=${sessionId} analyzed OK subject=${subject} topics=${result.topics?.length ?? 0}`);
+    this.logger.log(`[Gemini] Homework session=${sessionId} analyzed OK subject=${parsed.subject} topics=${parsed.topics.length}`);
   }
 
   async getSession(sessionId: string, userId: string, role: 'parent' | 'child' = 'parent'): Promise<HomeworkSession> {
@@ -410,18 +674,7 @@ ${conversationText}`;
 
     this.logger.log(`[Gemini] Invoking guest stateless analysis model=${GEMINI_MODEL}`);
 
-    const model = new ChatGoogleGenerativeAI({
-      model: GEMINI_MODEL,
-      apiKey,
-      maxOutputTokens: 8192,
-      temperature: 0.1,
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      ],
-    });
+    const model = this.createVisionModel(apiKey);
 
     let response: Awaited<ReturnType<typeof model.invoke>>;
     try {
@@ -444,36 +697,17 @@ ${conversationText}`;
       throw err;
     }
 
-    const text = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-    const extracted = extractJsonObject(text);
-    if (!extracted) {
-      this.logger.error(
-        `\n❌ [Gemini] Guest stateless analysis — no JSON object.\nRaw text received:\n${text}\n`,
-      );
-      throw new Error(`Gemini returned invalid response: ${text.slice(0, 300)}`);
-    }
+    const text =
+      extractStreamChunkText(response.content) ||
+      (typeof response.content === 'string'
+        ? response.content
+        : JSON.stringify(response.content));
 
-    let result: GeminiHomeworkResult;
-    try {
-      const sanitized = sanitizeJson(extracted);
-      result = JSON.parse(sanitized);
-    } catch (err: any) {
-      this.logger.error(
-        `\n❌ [Gemini] Guest stateless analysis — invalid JSON: ${err.message}\nRaw JSON candidate:\n${extracted}\n`,
-        err.stack,
-      );
-      throw new Error(`Invalid JSON format: ${err.message}`);
-    }
+    const parsed = this.parseHomeworkResult(text, 'Guest stateless analysis');
 
-    const validSubjects = ['MATH', 'SCIENCE', 'ENGLISH', 'HISTORY', 'GEOGRAPHY'];
-    const subject = validSubjects.includes(result.subject?.toUpperCase()) ? result.subject.toUpperCase() : 'SCIENCE';
-
-    this.logger.log(`[Gemini] Guest stateless analysis OK subject=${subject} topics=${result.topics?.length ?? 0}`);
+    this.logger.log(`[Gemini] Guest stateless analysis OK subject=${parsed.subject} topics=${parsed.topics.length}`);
     return {
-      title: result.title || 'Homework',
-      subject,
-      topics: result.topics || [],
-      answersMarkdown: result.answers_markdown || '',
+      ...parsed,
       status: 'READY',
     };
   }
@@ -489,28 +723,16 @@ ${conversationText}`;
 
     this.logger.log(`[Gemini] Guest chat invoke model=${GEMINI_MODEL} historyLen=${history.length} msgLen=${message.length}`);
 
-    const systemInstruction = `You are an encouraging K-12 tutor assistant in QuizRope — an educational tug-of-war quiz app for children.
-Your ONLY job is to help the student understand their homework.
-Homework content for context:
-${sessionContext}
-
-STRICT RULES — follow all of these without exception:
-1. ONLY discuss the student's homework and related school subjects. If asked about anything unrelated, politely decline and redirect to the homework.
-2. NEVER simply give the final answer — always guide, explain, and scaffold so the student actually learns.
-3. NEVER discuss violence, adult content, personal information, politics, religion, or anything inappropriate for children.
-4. NEVER impersonate other people, claim to be human, or role-play as a different AI system.
-5. Keep all language simple, encouraging, and age-appropriate for K-12 students.
-6. If a student mentions personal distress or safety concerns, respond with care and encourage them to talk to a trusted adult.
-  - ONLY use $ ... $ for inline math and $$ ... $$ for block math for complex formulas (fractions, roots, exponents, variables).
-  - Use PLAIN TEXT for simple arithmetic.
-  - Use academic LaTeX structures like \\section*{...}, \\begin{itemize}, and \\textbf{...} for lesson content.
-  - Write thorough, step-by-step educational explanations. Break down fundamental concepts so the child actually learns.`;
+    const systemInstruction = buildHomeworkChatSystemInstruction({
+      sessionContext,
+    });
 
     const model = new ChatGoogleGenerativeAI({
       model: GEMINI_MODEL,
       apiKey,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2560,
       temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
     });
 
     const msgs = [
@@ -533,7 +755,7 @@ STRICT RULES — follow all of these without exception:
       throw err;
     }
 
-    const text = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+    const text = extractStreamChunkText(response.content) || JSON.stringify(response.content);
     this.logger.log(`[Gemini] Guest chat OK responseLen=${text.length}`);
     return { response: text };
   }
@@ -554,38 +776,18 @@ STRICT RULES — follow all of these without exception:
       ? sessionContext.slice(0, 3000) + '\n...[truncated]'
       : sessionContext;
 
-    const systemInstruction = `You are an encouraging K-12 tutor assistant in QuizRope — an educational tug-of-war quiz app for children.
-Your ONLY job is to help the student understand their homework.
-Homework content for context:
-${context}
-
-STRICT RULES — follow all of these without exception:
-1. ONLY discuss the student's homework and related school subjects. If asked about anything unrelated, politely decline and redirect to the homework.
-2. NEVER simply give the final answer — always guide, explain, and scaffold so the student actually learns.
-3. NEVER discuss violence, adult content, personal information, politics, religion, or anything inappropriate for children.
-4. NEVER impersonate other people, claim to be human, or role-play as a different AI system.
-5. Keep all language simple, encouraging, and age-appropriate for K-12 students.
-6. If a student mentions personal distress or safety concerns, respond with care and encourage them to talk to a trusted adult.
-
-- **TEACHING APPROACH**:
-  - Provide thorough, step-by-step, and HIGHLY DESCRIPTIVE explanations so the student truly understands the concept. 
-  - Explain the reasoning and the "why" before the steps. Avoid dry list-of-steps.
-  - Break down every idea into its fundamentals — assume the student needs to learn from scratch.
-  - Use numbered steps for reasoning, examples, and analogies to make abstract ideas concrete.
-  - After explaining, ask a follow-up question or give a hint to check that the student understood.
-  - Be warm, patient, and encouraging throughout.
-- **STYLE**: Always keep your questions and explanations extremely CONCISE. NEVER write more than one short sentence for a question you ask the student.
-- **MATH RENDERING RULES**:
-  - ONLY use $ ... $ for inline math and $$ ... $$ for block math for complex formulas (fractions, roots, exponents, variables).
-  - Use PLAIN TEXT for simple arithmetic.
-  - Ensure square roots, fractions, and symbols are clearly written in standard LaTeX.
-7. Always respond in the language identified by this BCP-47 code: ${language || 'en'}.`;
+    const systemInstruction = buildHomeworkChatSystemInstruction({
+      sessionContext: context,
+      language,
+      conciseFollowUp: true,
+    });
 
     const model = new ChatGoogleGenerativeAI({
       model: GEMINI_MODEL,
       apiKey,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2560,
       temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
     });
 
     const msgs = [
@@ -600,7 +802,7 @@ STRICT RULES — follow all of these without exception:
       const stream = await model.stream(msgs, signal ? ({ signal } as any) : undefined);
       for await (const chunk of stream) {
         if (signal?.aborted) break;
-        const token = typeof chunk.content === 'string' ? chunk.content : '';
+        const token = extractStreamChunkText(chunk.content);
         if (token) yield token;
       }
     } catch (err: any) {

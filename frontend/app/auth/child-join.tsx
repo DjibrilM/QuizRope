@@ -1,28 +1,34 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  Pressable,
-  TextInput,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, Stack } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { apiService } from "../../src/services/api";
 import { useGameStore } from "../../src/stores/gameStore";
 import {
-  ScreenHeader,
-  BouncePress,
   AnimatedLoader,
   AvatarIcon,
+  LanguageSelector,
 } from "../../src/components/common";
 import { QRScanner } from "../../src/components/device";
-import { FONTS } from "../../src/constants/theme";
-
+import {
+  AppInput,
+  LanguagePill,
+  PillButton,
+  type FloatingBottomSheetRef,
+} from "../../src/components/ui";
+import { FONTS, UI_COLORS, UI_RADII } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
 import * as guestDb from "../../src/services/guestDb";
 import { NotificationService } from "../../src/services/NotificationService";
 
@@ -33,9 +39,15 @@ export function extractCodeFromScan(data: string): string {
   const trimmed = data.trim();
   try {
     const parsed = JSON.parse(trimmed);
-    if (parsed.token && typeof parsed.token === "string") return parsed.token.trim().toUpperCase();
-    if (parsed.code && typeof parsed.code === "string") return parsed.code.trim().toUpperCase();
-    if (parsed.sessionToken && typeof parsed.sessionToken === "string") return parsed.sessionToken.trim().toUpperCase();
+    if (parsed.token && typeof parsed.token === "string") {
+      return parsed.token.trim().toUpperCase();
+    }
+    if (parsed.code && typeof parsed.code === "string") {
+      return parsed.code.trim().toUpperCase();
+    }
+    if (parsed.sessionToken && typeof parsed.sessionToken === "string") {
+      return parsed.sessionToken.trim().toUpperCase();
+    }
   } catch {}
 
   const paramMatch = trimmed.match(/[?&](?:code|token)=([A-Za-z0-9]+)/i);
@@ -51,7 +63,7 @@ export function extractCodeFromScan(data: string): string {
 }
 
 export default function ChildJoinScreen() {
-  const { t } = useTranslation(["device", "common"]);
+  const { t } = useTranslation(["device", "common", "auth"]);
   usePortrait();
   const [status, setStatus] = useState<Status>("idle");
   const [code, setCode] = useState("");
@@ -59,9 +71,18 @@ export default function ChildJoinScreen() {
   const [linkInfo, setLinkInfo] = useState<any>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const scanEnabled = useRef(true);
-  const { setChildSession } = useGameStore();
+  const langSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const { setChildSession, locale } = useGameStore();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const contentTop = Math.max(headerHeight, insets.top + 52) + 16;
 
-  // Look up child info when a 5-6 char code is entered
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
+
+  // Look up child info when a 4-7 char code is entered
   useEffect(() => {
     const cleanCode = code.trim().toUpperCase();
     if (cleanCode.length >= 4 && cleanCode.length <= 7) {
@@ -89,9 +110,7 @@ export default function ChildJoinScreen() {
       setError("");
       try {
         const cleanCode = extractCodeFromScan(rawCode);
-        console.log("Attempting to join with code:", cleanCode);
 
-        // Guest link codes are 6 characters, session tokens are 8 characters
         const result =
           cleanCode.length === 6
             ? await apiService.redeemGuestCode(cleanCode)
@@ -99,7 +118,6 @@ export default function ChildJoinScreen() {
 
         apiService.setToken(result.token);
 
-        // Immediately fetch the child profile so the frontend renders the avatar
         try {
           const me = (await apiService.getMe()) as any;
           if (me) {
@@ -113,21 +131,16 @@ export default function ChildJoinScreen() {
           console.warn("Failed to fetch fresh profile immediately:", e);
         }
 
-        // Migrate guest data to the new child account
         try {
           const payload = await guestDb.getAllDataForMigration();
           if (
             payload.matches.length > 0 ||
             payload.homeworkSessions.length > 0
           ) {
-            console.log("Migrating guest data...");
             await apiService.migrateLocalGuestData(payload, result.token);
             await guestDb.clearAllGuestData();
             useGameStore.getState().clearGuestProfile();
           }
-          // After migration (or if none), sync EVERYTHING from backend to local SQLite
-          // This ensures that even on a new device, the child's history is available offline.
-          console.log("Syncing all backend data to local...");
           await apiService.syncBackendDataToLocal();
         } catch (migErr) {
           console.error("Migration/Sync failed (non-fatal):", migErr);
@@ -165,202 +178,353 @@ export default function ChildJoinScreen() {
     }
   };
 
+  const nativeHeader = (
+    <Stack.Screen
+      options={{
+        headerShown: true,
+        headerTransparent: true,
+        headerStyle: { backgroundColor: "transparent" },
+        headerShadowVisible: false,
+        title: "",
+        headerBackVisible: true,
+        headerBackButtonDisplayMode: "minimal",
+        headerTintColor: UI_COLORS.textPrimary,
+        headerRight: () => (
+          <LanguagePill
+            transparent={Platform.OS === "ios"}
+            onPress={() => langSheetRef.current?.present()}
+          />
+        ),
+      }}
+    />
+  );
+
   if (status === "loading") {
     return (
-      <SafeAreaView className="flex-1 bg-game-bg">
-        <ScreenHeader title={t("device:childJoin.connectAccount", "Connect Account")} />
-        <View className="flex-1 items-center justify-center px-8">
-          <AnimatedLoader size="lg" />
+      <SafeAreaView style={styles.root} edges={["bottom"]}>
+        {nativeHeader}
+        <View style={styles.centerState}>
+          <AnimatedLoader size="lg" color={UI_COLORS.primary} />
+          <Text style={[styles.loadingTitle, { fontFamily: headingFont }]}>
+            {t("common:labels.connecting", "Connecting...")}
+          </Text>
         </View>
+        <LanguageSelector ref={langSheetRef} />
       </SafeAreaView>
     );
   }
 
   if (status === "scanning") {
     return (
-      <SafeAreaView className="flex-1 bg-game-bg">
-        <ScreenHeader title={t("device:childJoin.connectAccount", "Connect Account")} />
-        <View className="flex-1 items-center justify-center px-8">
-          <View className="w-72 h-72 rounded-3xl overflow-hidden mb-6">
-            <QRScanner onScan={handleScan} enabled={scanEnabled.current} />
+      <SafeAreaView style={styles.root} edges={["bottom"]}>
+        {nativeHeader}
+        <View style={[styles.scannerContainer, { paddingTop: contentTop }]}>
+          <Text style={[styles.heading, { fontFamily: headingFont }]}>
+            {t("device:childJoin.scanQR", "Scan QR Code")}
+          </Text>
+          <Text style={styles.subheading}>
+            {t(
+              "device:childJoin.scanInstruction",
+              "Point your camera at the QR code on your parent's device.",
+            )}
+          </Text>
+
+          <View style={styles.scannerCard}>
+            <View style={styles.scannerInner}>
+              <QRScanner onScan={handleScan} enabled={scanEnabled.current} />
+            </View>
           </View>
-          <Pressable
-            onPress={() => {
-              scanEnabled.current = true;
-              setStatus("idle");
-            }}
-            className="mt-4"
-          >
-            <Text
-              style={{ color: "#B8A9C9", fontSize: 16, fontFamily: FONTS.body }}
-            >
-              {t("device:childJoin.enterCodeInstead")}
-            </Text>
-          </Pressable>
+
+          <View style={styles.scannerAction}>
+            <PillButton
+              variant="secondary"
+              size="lg"
+              label={t("device:childJoin.enterCodeInstead", "Enter code instead")}
+              onPress={() => {
+                scanEnabled.current = true;
+                setStatus("idle");
+              }}
+            />
+          </View>
         </View>
+        <LanguageSelector ref={langSheetRef} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-game-bg">
-      <ScreenHeader title={t("device:childJoin.connectAccount", "Connect Account")} />
+    <SafeAreaView style={styles.root} edges={["bottom"]}>
+      {nativeHeader}
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            paddingHorizontal: 12,
-            paddingVertical: 24,
-          }}
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: contentTop },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <Text
-            style={{
-              fontSize: 32,
-              color: "#FFFFFF",
-              fontFamily: "LuckiestGuy_400Regular",
-              textAlign: "center",
-              marginBottom: 12,
-            }}
-          >
-            {t("device:childJoin.connectAccount", "Connect Account")}
-          </Text>
+          <View style={styles.mainColumn}>
+            {/* Hero */}
+            <View style={styles.heroSection}>
+              <Text style={[styles.heading, { fontFamily: headingFont }]}>
+                {t("device:childJoin.connectAccount", "Connect Account")}
+              </Text>
+              <Text style={styles.subheading}>
+                {t("device:childJoin.instruction")}
+              </Text>
+            </View>
 
-          <Text
-            style={{
-              fontSize: 16,
-              color: "#9CA3AF",
-              marginBottom: 32,
-              textAlign: "center",
-              fontFamily: FONTS.body,
-            }}
-          >
-            {t("device:childJoin.instruction")}
-          </Text>
-
-          <View className="w-full max-w-sm mb-4">
-            <TextInput
+            {/* Code input (twende-passengers rounded matte input style) */}
+            <AppInput
               value={code}
-              onChangeText={setCode}
+              onChangeText={(v) => {
+                setCode(v);
+                if (error) setError("");
+              }}
               placeholder={t("device:childJoin.codeInputPlaceholder")}
-              placeholderTextColor="#9CA3AF"
-              className="w-full text-white text-md px-4 rounded-2xl mb-4 h-20"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.04)",
-                borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.08)",
-                textAlign: "center",
-                letterSpacing: 6,
-                fontFamily: "Bungee_400Regular",
+              error={error}
+              success={Boolean(linkInfo) && !isLookingUp && error === ""}
+              leftIcon={
+                <Ionicons
+                  name="key-outline"
+                  size={18}
+                  color={
+                    error
+                      ? UI_COLORS.coral
+                      : linkInfo
+                        ? UI_COLORS.mint
+                        : UI_COLORS.textSecondary
+                  }
+                />
+              }
+              inputStyle={{
+                letterSpacing: code.length > 0 ? 3.5 : 0.2,
+                fontSize: code.length > 0 ? 17 : 15,
               }}
               autoCapitalize="characters"
               autoCorrect={false}
+              returnKeyType="go"
               onSubmitEditing={handleSubmitCode}
             />
-            <BouncePress
-              onPress={handleSubmitCode}
-              className="w-full py-4 rounded-2xl items-center justify-center mb-2"
-              style={{ backgroundColor: "#6C5CE7" }}
-            >
-              <Text
-                className="text-white text-lg"
-                style={{ fontFamily: "Bungee_400Regular", letterSpacing: 0.5 }}
-              >
-                {t("common:buttons.link")}
+
+            {isLookingUp && (
+              <View style={styles.lookupLoader}>
+                <AnimatedLoader size="sm" color={UI_COLORS.primary} />
+              </View>
+            )}
+
+            {/* Resolved profile preview pill matching SelectionCard */}
+            {!isLookingUp && linkInfo && (
+              <View style={styles.previewPill}>
+                <View style={styles.previewBall}>
+                  <AvatarIcon avatarId={linkInfo.avatarUrl} size={46} />
+                </View>
+                <View style={styles.previewTextCol}>
+                  <Text style={styles.previewLabel}>Linking to</Text>
+                  <Text
+                    style={[styles.previewName, { fontFamily: headingFont }]}
+                    numberOfLines={1}
+                  >
+                    {linkInfo.displayName}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={22}
+                  color={UI_COLORS.mint}
+                />
+              </View>
+            )}
+
+            {/* Primary CTA */}
+            <View style={styles.ctaWrap}>
+              <PillButton
+                label={t("common:buttons.link", "Link")}
+                onPress={handleSubmitCode}
+                disabled={!code.trim()}
+                size="lg"
+              />
+            </View>
+
+            {/* Hairline divider matching index.tsx */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>
+                {t("auth:roleSelect.or", "or")}
               </Text>
-            </BouncePress>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Secondary QR CTA */}
+            <PillButton
+              variant="secondary"
+              size="lg"
+              label={t("device:childJoin.scanQR", "Scan QR Code")}
+              icon={
+                <Ionicons
+                  name="qr-code-outline"
+                  size={18}
+                  color={UI_COLORS.textPrimary}
+                />
+              }
+              onPress={() => {
+                scanEnabled.current = true;
+                setStatus("scanning");
+              }}
+            />
           </View>
-
-          {isLookingUp && (
-            <View className="mb-4">
-              <AnimatedLoader size="sm" />
-            </View>
-          )}
-
-          {!isLookingUp && linkInfo && (
-            <View
-              className="rounded-2xl px-6 py-4 mb-6 w-full max-w-md flex-row items-center gap-4"
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.04)",
-                borderWidth: 1,
-                borderColor: "rgba(167, 139, 250, 0.3)",
-                shadowColor: "#9B59B6",
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-                elevation: 4,
-              }}
-            >
-              <View
-                className="w-12 h-12 rounded-full items-center justify-center border"
-                style={{
-                  backgroundColor: "rgba(167, 139, 250, 0.1)",
-                  borderColor: "rgba(167, 139, 250, 0.2)",
-                }}
-              >
-                <AvatarIcon avatarId={linkInfo.avatarUrl} size={32} />
-              </View>
-              <View className="flex-1">
-                <Text
-                  style={{
-                    color: "#9CA3AF",
-                    fontSize: 12,
-                    fontFamily: FONTS.body,
-                  }}
-                >
-                  Linking to:
-                </Text>
-                <Text
-                  style={{
-                    color: "#FFFFFF",
-                    fontSize: 18,
-                    fontFamily: "LuckiestGuy_400Regular",
-                  }}
-                >
-                  {linkInfo.displayName}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {error !== "" && (
-            <Text
-              style={{
-                color: "#EF4444",
-                fontSize: 14,
-                fontFamily: FONTS.body,
-                marginBottom: 16,
-                textAlign: "center",
-              }}
-            >
-              {error}
-            </Text>
-          )}
-
-          <BouncePress
-            onPress={() => {
-              scanEnabled.current = true;
-              setStatus("scanning");
-            }}
-            className="w-full max-w-sm py-4 rounded-2xl mt-4"
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.04)",
-              borderWidth: 1,
-              borderColor: "rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <Text
-              className="text-white text-base text-center"
-              style={{ fontFamily: "Bungee_400Regular", letterSpacing: 0.5 }}
-            >
-              {t("device:childJoin.scanQR")}
-            </Text>
-          </BouncePress>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <LanguageSelector ref={langSheetRef} />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  mainColumn: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+  },
+  heroSection: {
+    marginBottom: 24,
+  },
+  heading: {
+    fontSize: 30,
+    lineHeight: 38,
+    letterSpacing: 0.4,
+    paddingTop: 2,
+    color: UI_COLORS.textPrimary,
+  },
+  subheading: {
+    marginTop: 6,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+  },
+  lookupLoader: {
+    alignItems: "center",
+    marginTop: 14,
+  },
+  previewPill: {
+    marginTop: 14,
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1520",
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    paddingVertical: 5,
+    paddingLeft: 5,
+    paddingRight: 16,
+    gap: 12,
+  },
+  previewBall: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#241D2E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewTextCol: {
+    flex: 1,
+    gap: 1,
+  },
+  previewLabel: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: UI_COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  previewName: {
+    fontSize: 17,
+    lineHeight: 22,
+    color: UI_COLORS.textPrimary,
+  },
+  ctaWrap: {
+    marginTop: 20,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: UI_COLORS.borderSubtle,
+  },
+  dividerText: {
+    marginHorizontal: 14,
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: UI_COLORS.textMuted,
+    textTransform: "lowercase",
+  },
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 18,
+  },
+  loadingTitle: {
+    fontSize: 22,
+    color: UI_COLORS.textPrimary,
+    letterSpacing: 0.4,
+  },
+  scannerContainer: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 16,
+    maxWidth: 520,
+    width: "100%",
+    alignSelf: "center",
+  },
+  scannerCard: {
+    flex: 1,
+    width: "100%",
+    marginTop: 18,
+    marginBottom: 18,
+    borderRadius: 30,
+    borderCurve: "continuous",
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    padding: 6,
+  },
+  scannerInner: {
+    flex: 1,
+    borderRadius: 24,
+    borderCurve: "continuous",
+    overflow: "hidden",
+  },
+  scannerAction: {
+    paddingTop: 2,
+  },
+});

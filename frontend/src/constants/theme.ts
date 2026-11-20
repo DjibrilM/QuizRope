@@ -5,6 +5,7 @@ export const FONTS = {
   bodySemiBold: 'Nunito_600SemiBold',
   bodyBold: 'Nunito_700Bold',
   bodyExtraBold: 'Nunito_800ExtraBold',
+  bodyBlack: 'Nunito_900Black',
 } as const;
 
 export const FORTNITE_COLORS = {
@@ -105,4 +106,70 @@ export const FONT_SIZES = {
   '6xl': 60,
   '7xl': 72,
   '8xl': 96,
+} as const;
+
+/**
+ * Refined design tokens for the UI refactor: solid layered dark surfaces,
+ * crisp neutral ink hierarchy, and concentric border radii.
+ */
+export const UI_COLORS = {
+  bg: '#0D0B14',
+  surface: '#161221',
+  surfaceSubtle: '#1E182B',
+  surfaceElevated: '#261F36',
+
+  primary: '#6C5CE7',
+  primaryPressed: '#5B4BD6',
+  primarySoft: 'rgba(108, 92, 231, 0.14)',
+
+  coral: '#E85D75',
+  mint: '#34D399',
+  amber: '#FBBF24',
+
+  textPrimary: '#F9FAFB',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6E6480',
+  textOnPrimary: '#FFFFFF',
+  textSubtleOnPrimary: 'rgba(255, 255, 255, 0.85)',
+
+  borderSubtle: 'rgba(255, 255, 255, 0.07)',
+  borderActive: 'rgba(255, 255, 255, 0.24)',
+  insetTopHighlight: 'rgba(255, 255, 255, 0.36)',
+  iconWell: '#1E182B',
+  iconWellSelected: 'rgba(255, 255, 255, 0.18)',
+} as const;
+
+export const UI_RADII = {
+  pill: 999,
+  cardLg: 28,
+  card: 24,
+  tile: 18,
+  iconWell: 16,
+  badge: 14,
+} as const;
+
+export const UI_SPACING = {
+  screenX: 16,
+  cardPad: 16,
+  gapSm: 8,
+  gapMd: 12,
+  gapLg: 20,
+  gapXl: 28,
+} as const;
+
+export const UI_SHADOWS = {
+  primaryGlow: {
+    shadowColor: '#6C5CE7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  subtleLift: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
 } as const;

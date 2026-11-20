@@ -1,59 +1,61 @@
 import React, { useEffect } from "react";
-import { Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { useTranslation } from "react-i18next";
 import Animated, {
-  useSharedValue,
+  interpolateColor,
   useAnimatedProps,
   useAnimatedStyle,
-  withTiming,
+  useSharedValue,
   withRepeat,
   withSequence,
-  interpolateColor,
+  withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+import { FONTS, UI_COLORS } from "../../constants/theme";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface TimerBarProps {
   timeRemaining: number;
   maxTime: number;
+  size?: number;
 }
 
-const SIZE = 48;
-const STROKE = 4;
-const RADIUS = (SIZE - STROKE) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const STROKE = 3.5;
 
-export function TimerBar({ timeRemaining, maxTime }: TimerBarProps) {
+export function TimerBar({ timeRemaining, maxTime, size = 44 }: TimerBarProps) {
   const { t } = useTranslation("common");
+  const radius = (size - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+
   const progress = useSharedValue(timeRemaining / maxTime);
   const pulse = useSharedValue(1);
 
   useEffect(() => {
     progress.value = withTiming(timeRemaining / maxTime, { duration: 900 });
-  }, [timeRemaining]);
+  }, [maxTime, progress, timeRemaining]);
 
   useEffect(() => {
     if (timeRemaining <= 5 && timeRemaining > 0) {
       pulse.value = withRepeat(
         withSequence(
-          withTiming(1.08, { duration: 300 }),
-          withTiming(1, { duration: 300 }),
+          withTiming(1.07, { duration: 280 }),
+          withTiming(1, { duration: 280 }),
         ),
         -1,
         false,
       );
     } else {
-      pulse.value = withTiming(1, { duration: 200 });
+      pulse.value = withTiming(1, { duration: 180 });
     }
-  }, [timeRemaining <= 5]);
+  }, [pulse, timeRemaining <= 5]);
 
   const circleProps = useAnimatedProps(() => ({
-    strokeDashoffset: CIRCUMFERENCE * (1 - progress.value),
+    strokeDashoffset: circumference * (1 - progress.value),
     stroke: interpolateColor(
       progress.value,
-      [0, 0.3, 0.6, 1],
-      ["#EF4444", "#E85D75", "#9B59B6", "#9B59B6"],
+      [0, 0.25, 0.55, 1],
+      ["#EF4444", "#FBBF24", UI_COLORS.primary, UI_COLORS.primary],
     ),
   }));
 
@@ -65,41 +67,62 @@ export function TimerBar({ timeRemaining, maxTime }: TimerBarProps) {
     <Animated.View
       style={[
         containerStyle,
-        { width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" },
+        styles.container,
+        { width: size, height: size },
       ]}
       accessibilityRole="timer"
-      accessibilityLabel={t("accessibility.secondsRemaining", { count: timeRemaining })}
+      accessibilityLabel={t("accessibility.secondsRemaining", {
+        count: timeRemaining,
+      })}
     >
-      <Svg width={SIZE} height={SIZE} style={{ transform: [{ rotate: "-90deg" }] }}>
+      <Svg
+        width={size}
+        height={size}
+        style={{ transform: [{ rotate: "-90deg" }] }}
+      >
         <Circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
-          stroke="#3D2E4A"
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={UI_COLORS.surfaceElevated}
           strokeWidth={STROKE}
           fill="none"
         />
         <AnimatedCircle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
           strokeWidth={STROKE}
           fill="none"
-          strokeDasharray={CIRCUMFERENCE}
+          strokeDasharray={circumference}
           animatedProps={circleProps}
           strokeLinecap="round"
         />
       </Svg>
       <Text
-        style={{
-          position: "absolute",
-          color: "#FFFFFF",
-          fontSize: 14,
-          fontFamily: "Bungee_400Regular",
-        }}
+        style={[
+          styles.label,
+          timeRemaining <= 5 && styles.labelUrgent,
+        ]}
       >
         {timeRemaining}
       </Text>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    position: "absolute",
+    color: UI_COLORS.textPrimary,
+    fontSize: 13,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  labelUrgent: {
+    color: "#EF4444",
+  },
+});

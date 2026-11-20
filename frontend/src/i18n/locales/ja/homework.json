@@ -1,24 +1,42 @@
 {
   "title": "宿題",
+  "subtitle": "ページをスキャンして詳しい解説と復習クイズを作ろう",
   "status": {
-    "ready": "✓ 準備完了",
+    "ready": "準備完了",
     "analyzing": "分析中…",
-    "failed": "✕ 失敗"
+    "failed": "失敗"
   },
   "session": {
     "defaultTitle": "宿題セッション",
-    "quizDone": "クイズ完了 ✓",
+    "quizDone": "クイズ完了",
     "reviewTitle": "写真を確認",
+    "viewPhoto": "写真を見る",
+    "solution": "解説",
+    "copied": "コピーしました",
     "notFound": "セッションが見つかりません",
     "assistTitle": "アシスト",
-    "noExplanation": "解説がありません。"
+    "noExplanation": "解説がありません。",
+    "visualGuide": "ビジュアル図解",
+    "cycle": "サイクル",
+    "vennBoth": "両方",
+    "vennCommon": "共通点",
+    "callouts": {
+      "idea": "大切なポイント",
+      "tip": "ヒント",
+      "watchout": "ここに注意！",
+      "check": "答えを確かめよう",
+      "example": "例"
+    }
   },
   "actions": {
     "scanNew": "新しい宿題をスキャン",
     "scanNewDesc": "ページを撮影してAIの解説を取得",
+    "scansRemaining": "本日の残りスキャン：{{remaining}}/{{limit}}",
+    "unlimitedScans": "無制限スキャン（開発モード）",
     "retake": "撮り直す",
     "analyze": "分析する",
-    "library": "ライブラリ"
+    "library": "写真",
+    "takePhoto": "撮影する"
   },
   "filters": {
     "all": "すべて"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "AIに質問する",
+    "askShort": "AI質問",
     "subtitle": "宿題について何でも聞いてください",
     "placeholder": "質問を入力…",
-    "emptyState": "宿題について何でも聞いてください"
+    "emptyState": "宿題について何でも聞いてください",
+    "suggestions": {
+      "hintLabel": "ヒントをもらう",
+      "hintPrompt": "答えを全部教えずにヒントをくれますか？",
+      "stepsLabel": "ステップ解説",
+      "stepsPrompt": "これを順番にステップごとで説明してくれますか？",
+      "simpleLabel": "わかりやすく",
+      "simplePrompt": "大事な考え方をやさしい言葉で説明してくれますか？",
+      "firstLabel": "最初の一歩は？",
+      "firstPrompt": "これを解くとき、最初に何をすればいいですか？"
+    }
   },
   "quiz": {
     "title": "クイズ",

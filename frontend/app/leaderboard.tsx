@@ -26,12 +26,12 @@ import type { ChildMatchSummary } from "@shared/types/analytics.types";
 
 import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
 import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetView,
-  BottomSheetBackdrop,
-} from "@gorhom/bottom-sheet";
-import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
+  FloatingBottomSheet,
+  FloatingBottomSheetScrollView,
+  FloatingBottomSheetView,
+  type FloatingBottomSheetRef,
+} from "../src/components/ui";
+import { getHeadingFont } from "../src/utils/fontForLocale";
 
 function MedalIcon({ rank }: { rank: number }) {
   const colors: Record<number, [string, string]> = {
@@ -92,11 +92,11 @@ function ChildDetailSheet({
   const recentMatches = matchHistory.slice(0, 5);
 
   return (
-    <BottomSheetScrollView
+    <FloatingBottomSheetScrollView
       contentContainerStyle={{
         width: "100%",
         paddingHorizontal: 24,
-        paddingBottom: 40,
+        paddingBottom: 24,
         paddingTop: 10,
       }}
     >
@@ -118,7 +118,7 @@ function ChildDetailSheet({
             borderColor: "#3D2E4A",
           }}
         >
-          <AvatarIcon avatarId={entry.avatarUrl} size={50} />
+          <AvatarIcon avatarId={entry.avatarUrl} size={72} />
         </View>
         <Text
           style={{
@@ -324,10 +324,11 @@ function ChildDetailSheet({
       <Button
         label={t("common:buttons.close")}
         variant="secondary"
+        style={{ backgroundColor: "#241D2E" }}
         className="w-full max-w-none"
         onPress={onClose}
       />
-    </BottomSheetScrollView>
+    </FloatingBottomSheetScrollView>
   );
 }
 
@@ -345,8 +346,8 @@ export default function LeaderboardScreen() {
   const uid = isChild
     ? childSession?.parentId ?? null
     : parentUser?._id ?? parentUser?.id ?? guestProfile?.guestId ?? null;
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const logoutSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const logoutSheetRef = useRef<FloatingBottomSheetRef>(null);
   const [selectedEntry, setSelectedEntry] = useState<
     (LeaderboardEntry & { avatarUrl?: string }) | null
   >(null);
@@ -429,18 +430,6 @@ export default function LeaderboardScreen() {
     queryClient.clear();
     router.replace("/");
   }, [logout, queryClient]);
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.6}
-      />
-    ),
-    [],
-  );
 
   const handleEntryPress = (
     entry: LeaderboardEntry & { avatarUrl?: string },
@@ -570,7 +559,7 @@ export default function LeaderboardScreen() {
                           marginHorizontal: 12,
                         }}
                       >
-                        <AvatarIcon avatarId={entry.avatarUrl} size={30} />
+                        <AvatarIcon avatarId={entry.avatarUrl} size={44} />
                       </View>
 
                       <View style={{ flex: 1 }}>
@@ -648,22 +637,10 @@ export default function LeaderboardScreen() {
         )}
       </ScrollView>
 
-      <BottomSheetModal
+      <FloatingBottomSheet
         ref={bottomSheetRef}
         snapPoints={["75%"]}
-        enablePanDownToClose
         enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
       >
         {selectedEntry && (
           <ChildDetailSheet
@@ -671,27 +648,12 @@ export default function LeaderboardScreen() {
             onClose={() => bottomSheetRef.current?.dismiss()}
           />
         )}
-      </BottomSheetModal>
+      </FloatingBottomSheet>
 
       {/* Logout confirmation sheet */}
-      <BottomSheetModal
-        ref={logoutSheetRef}
-        enablePanDownToClose
-        enableDynamicSizing
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
-      >
-        <BottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 10 }}
+      <FloatingBottomSheet ref={logoutSheetRef} enableDynamicSizing>
+        <FloatingBottomSheetView
+          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 10 }}
         >
           <Text
             style={{
@@ -699,7 +661,7 @@ export default function LeaderboardScreen() {
               fontSize: 22,
               textAlign: "center",
               marginBottom: 12,
-              fontFamily: "LuckiestGuy_400Regular",
+              fontFamily: getHeadingFont(),
             }}
           >
             {t("auth:logout.title")}
@@ -715,22 +677,26 @@ export default function LeaderboardScreen() {
           >
             {t("auth:logout.confirmation")}
           </Text>
-          <View style={{ gap: 12 }}>
-            <Button
-              label={t("auth:logout.button")}
-              variant="danger"
-              onPress={executeLogout}
-              className="min-w-full max-w-none"
-            />
-            <Button
-              label={t("common:buttons.cancel")}
-              variant="secondary"
-              onPress={() => logoutSheetRef.current?.dismiss()}
-              className="w-full min-w-full max-w-none"
-            />
+          <View style={{ flexDirection: "row", width: "100%", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Button
+                label={t("common:buttons.cancel")}
+                variant="secondary"
+                style={{ backgroundColor: "#241D2E", width: "100%" }}
+                onPress={() => logoutSheetRef.current?.dismiss()}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label={t("auth:logout.button")}
+                variant="danger"
+                onPress={executeLogout}
+                style={{ width: "100%" }}
+              />
+            </View>
           </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+        </FloatingBottomSheetView>
+      </FloatingBottomSheet>
     </SafeAreaView>
   );
 }

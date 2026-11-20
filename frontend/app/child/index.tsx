@@ -3,8 +3,6 @@ import {
   ScrollView,
   Pressable,
   Text,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,14 +19,14 @@ import {
 } from "../../src/components/children";
 import { QRCodeDisplay, SessionCodeDisplay } from "../../src/components/device";
 import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetView,
-  BottomSheetBackdrop,
-} from "@gorhom/bottom-sheet";
-import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
+  FloatingBottomSheet,
+  FloatingBottomSheetScrollView,
+  FloatingBottomSheetView,
+  type FloatingBottomSheetRef,
+} from "../../src/components/ui";
 import { useTranslation } from "react-i18next";
 import { FONTS } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
 import { apiService } from "../../src/services/api";
 import { hapticsService } from "../../src/services/haptics";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -38,10 +36,10 @@ export default function ChildrenScreen() {
   const { t } = useTranslation("children");
   const { setChildren } = useGameStore();
   const queryClient = useQueryClient();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const confirmSheetRef = useRef<BottomSheetModal>(null);
-  const selectChildSheetRef = useRef<BottomSheetModal>(null);
-  const codeSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const confirmSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const selectChildSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const codeSheetRef = useRef<FloatingBottomSheetRef>(null);
   const [removingChild, setRemovingChild] = useState<{
     id: string;
     displayName: string;
@@ -216,18 +214,6 @@ export default function ChildrenScreen() {
     }
   }, [selectedChildForCode, t]);
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.6}
-      />
-    ),
-    [],
-  );
-
   const hasChildren = children.filter((c) => c?.displayName).length > 0;
 
   return (
@@ -339,107 +325,73 @@ export default function ChildrenScreen() {
       )}
 
       {/* Add child bottom sheet */}
-      <BottomSheetModal
+      <FloatingBottomSheet
         ref={bottomSheetRef}
-        snapPoints={["90%"]}
-        enablePanDownToClose
+        snapPoints={["88%"]}
         enableDynamicSizing={false}
-        android_keyboardInputMode="adjustResize"
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
       >
-        <KeyboardAvoidingView
+        <FloatingBottomSheetScrollView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 28 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <BottomSheetScrollView
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 60 }}
-            keyboardShouldPersistTaps="handled"
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 16,
+              paddingTop: 4,
+            }}
           >
-            <View
+            <Text
               style={{
-                flexDirection: "row",
+                fontFamily: getHeadingFont(),
+                fontSize: 22,
+                color: "#FFFFFF",
+              }}
+            >
+              {t("addNewPlayer")}
+            </Text>
+            <Pressable
+              onPress={handleCloseSheet}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: "#241D2E",
                 alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 16,
-                paddingTop: 4,
+                justifyContent: "center",
               }}
             >
               <Text
                 style={{
-                  fontFamily: "LuckiestGuy_400Regular",
-                  fontSize: 22,
-                  color: "#FFFFFF",
+                  color: "#B8A9C9",
+                  fontSize: 16,
+                  fontFamily: FONTS.bodyBold,
                 }}
               >
-                {t("addNewPlayer")}
+                {"\u2715"}
               </Text>
-              <Pressable
-                onPress={handleCloseSheet}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: "#231C2B",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#B8A9C9",
-                    fontSize: 16,
-                    fontFamily: FONTS.bodyBold,
-                  }}
-                >
-                  {"\u2715"}
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
+          </View>
 
-            <AddChildForm onSave={handleAdd} onCancel={handleCloseSheet} />
-          </BottomSheetScrollView>
-        </KeyboardAvoidingView>
-      </BottomSheetModal>
+          <AddChildForm onSave={handleAdd} onCancel={handleCloseSheet} />
+        </FloatingBottomSheetScrollView>
+      </FloatingBottomSheet>
 
       {/* Remove confirmation bottom sheet */}
-      <BottomSheetModal
-        ref={confirmSheetRef}
-        snapPoints={["32%"]}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
-      >
-        <BottomSheetView
-          style={{ flex: 1, paddingHorizontal: 24, paddingBottom: 20 }}
+      <FloatingBottomSheet ref={confirmSheetRef} enableDynamicSizing>
+        <FloatingBottomSheetView
+          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 8 }}
         >
           <Text
             style={{
               color: "#FFFFFF",
-              fontSize: 18,
+              fontSize: 20,
               textAlign: "center",
               marginBottom: 8,
-              fontFamily: "Bungee_400Regular",
+              fontFamily: getHeadingFont(),
             }}
           >
             {t("remove.title")}
@@ -461,15 +413,14 @@ export default function ChildrenScreen() {
               style={{
                 flex: 1,
                 paddingVertical: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#3D2E4A",
+                borderRadius: 999,
+                backgroundColor: "#241D2E",
                 alignItems: "center",
               }}
             >
               <Text
                 style={{
-                  color: "#B8A9C9",
+                  color: "#E5E7EB",
                   fontSize: 14,
                   fontFamily: FONTS.bodySemiBold,
                 }}
@@ -483,7 +434,7 @@ export default function ChildrenScreen() {
               style={{
                 flex: 1,
                 paddingVertical: 14,
-                borderRadius: 12,
+                borderRadius: 999,
                 backgroundColor: "#EF4444",
                 alignItems: "center",
                 opacity: deleteMutation.isPending ? 0.6 : 1,
@@ -502,32 +453,17 @@ export default function ChildrenScreen() {
               </Text>
             </Pressable>
           </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+        </FloatingBottomSheetView>
+      </FloatingBottomSheet>
 
       {/* Select child bottom sheet */}
-      <BottomSheetModal
-        ref={selectChildSheetRef}
-        enablePanDownToClose
-        enableDynamicSizing
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
-      >
-        <BottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 10 }}
+      <FloatingBottomSheet ref={selectChildSheetRef} enableDynamicSizing>
+        <FloatingBottomSheetView
+          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 10 }}
         >
           <Text
             className="text-white text-center text-xl mb-5"
-            style={{ fontFamily: "LuckiestGuy_400Regular" }}
+            style={{ fontFamily: getHeadingFont() }}
           >
             {t("linkCode.selectChild")}
           </Text>
@@ -549,32 +485,17 @@ export default function ChildrenScreen() {
                 />
               ))}
           </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+        </FloatingBottomSheetView>
+      </FloatingBottomSheet>
 
       {/* Code display bottom sheet */}
-      <BottomSheetModal
-        ref={codeSheetRef}
-        enablePanDownToClose
-        enableDynamicSizing
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
-      >
-        <BottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 10 }}
+      <FloatingBottomSheet ref={codeSheetRef} enableDynamicSizing>
+        <FloatingBottomSheetView
+          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 10 }}
         >
           <Text
             className="text-white text-center text-xl mb-1"
-            style={{ fontFamily: "LuckiestGuy_400Regular" }}
+            style={{ fontFamily: getHeadingFont() }}
           >
             {t("linkCode.title", { name: codeForChildName })}
           </Text>
@@ -611,8 +532,8 @@ export default function ChildrenScreen() {
               {secondsLeft > 0 && <SessionCodeDisplay code={codeResult.code} />}
             </View>
           )}
-        </BottomSheetView>
-      </BottomSheetModal>
+        </FloatingBottomSheetView>
+      </FloatingBottomSheet>
     </SafeAreaView>
   );
 }

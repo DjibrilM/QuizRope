@@ -1,28 +1,37 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TextInput, Pressable } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
-import Svg, { Path } from "react-native-svg";
+import React, { useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
 import * as Crypto from "expo-crypto";
+import { useTranslation } from "react-i18next";
+import { MatchStatus } from "@shared/types/match.types";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { useGameStore } from "../../src/stores/gameStore";
 import { apiService } from "../../src/services/api";
 import * as guestDb from "../../src/services/guestDb";
-import { Button, ScreenHeader } from "../../src/components/common";
 import { useToast } from "../../src/context/ToastContext";
-import { DifficultySelector, RoundsSelector } from "../../src/components/match";
-import { MatchStatus } from "@shared/types/match.types";
-import { useTranslation } from "react-i18next";
-import { FONTS } from "../../src/constants/theme";
+import { AvatarIcon } from "../../src/components/common/AvatarIcons";
+import {
+  DifficultySelector,
+  MatchStartDock,
+  PracticeContextField,
+  RoundsSelector,
+} from "../../src/components/match";
+import { FONTS, UI_COLORS, UI_RADII } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
 import { hapticsService } from "../../src/services/haptics";
-
-function PlayIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 3l14 9-14 9V3z" fill="#FFFFFF" />
-    </Svg>
-  );
-}
 
 export default function SoloMatchScreen() {
   usePortrait();
@@ -41,7 +50,14 @@ export default function SoloMatchScreen() {
     childSession?.childId ?? null,
   );
 
-  const subjectLabel = t(`common:subjects.${subject}`);
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const contentTop = Math.max(headerHeight, insets.top + 52) + 8;
+
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   const handleStart = async () => {
     setContextError("");
@@ -159,165 +175,196 @@ export default function SoloMatchScreen() {
   };
 
   return (
-    <SafeAreaView
-      edges={["bottom"]}
-      style={{ flex: 1, backgroundColor: "#0D0B14" }}
-    >
-      <ScreenHeader title={t("match:solo.title", { subject: subjectLabel })} />
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingBottom: 120,
-          paddingTop: 24,
-          paddingHorizontal: 24,
+    <SafeAreaView style={styles.root} edges={[]}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+          title: "",
+          headerBackVisible: true,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: UI_COLORS.textPrimary,
         }}
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
+      />
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <DifficultySelector selected={difficulty} onSelect={setDifficulty} />
-        <RoundsSelector selected={maxRounds} onSelect={setMaxRounds} />
-
-        {/* Child picker */}
-        {children.length > 0 && (
-          <View style={{ marginBottom: 24 }}>
-            <Text
-              style={{
-                color: "#7B6B8A",
-                fontSize: 11,
-                fontFamily: FONTS.bodySemiBold,
-                letterSpacing: 1.5,
-                textTransform: "uppercase",
-                marginBottom: 10,
-              }}
-            >
-              {t("match:solo.playingAs")}
-            </Text>
-
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {children.map((c) => {
-                const cId = c.id;
-                const active = selectedChildId === cId;
-                return (
-                  <Pressable
-                    key={c.id || (c as any)._id}
-                    onPress={() => {
-                      hapticsService.selection();
-                      const cId = c.id || (c as any)._id;
-                      setSelectedChildId(selectedChildId === cId ? null : cId);
-                    }}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 7,
-                      borderRadius: 20,
-                      backgroundColor: active ? "#A78BFA20" : "#1A1520",
-                      borderWidth: 1.5,
-                      borderColor: active ? "#A78BFA" : "#3D2E4A",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: active ? "#A78BFA" : "#B8A9C9",
-                        fontSize: 13,
-                        fontFamily: FONTS.bodySemiBold,
-                      }}
-                    >
-                      {c.displayName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: contentTop },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mainColumn}>
+            {/* Editorial Title & Subtitle */}
+            <View style={styles.heroSection}>
+              <Text style={[styles.heading, { fontFamily: headingFont }]}>
+                {t("match:solo.setupTitle")}
+              </Text>
+              <Text style={styles.subheading}>
+                {t("match:solo.setupSubtitle")}
+              </Text>
             </View>
+
+            <DifficultySelector
+              selected={difficulty}
+              onSelect={setDifficulty}
+            />
+
+            <RoundsSelector selected={maxRounds} onSelect={setMaxRounds} />
+
+            {/* Optional Child Picker */}
+            {children.length > 0 && (
+              <View style={styles.childSection}>
+                <Text style={styles.sectionLabel}>
+                  {t("match:solo.playingAs")}
+                </Text>
+                <View style={styles.childChipsRow}>
+                  {children.map((c) => {
+                    const cId = c.id || (c as any)._id;
+                    const active = selectedChildId === cId;
+                    return (
+                      <Pressable
+                        key={cId}
+                        onPress={() => {
+                          hapticsService.selection();
+                          setSelectedChildId(active ? null : cId);
+                        }}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        style={[
+                          styles.childChip,
+                          active
+                            ? styles.childChipActive
+                            : styles.childChipDefault,
+                        ]}
+                      >
+                        <AvatarIcon avatarId={c.avatarUrl} size={22} />
+                        <Text
+                          style={[
+                            styles.childChipText,
+                            active && styles.childChipTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {c.displayName}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            <PracticeContextField
+              label={t("match:solo.contextLabel")}
+              value={context}
+              onChangeText={(v) => {
+                setContext(v);
+                if (contextError) setContextError("");
+              }}
+              placeholder={t("match:solo.contextPlaceholder")}
+              hint={t("match:solo.contextHint")}
+              error={contextError}
+            />
           </View>
-        )}
+        </ScrollView>
 
-        {/* Context input */}
-        <View style={{ marginTop: 24 }}>
-          <Text
-            style={{
-              color: "#B8A9C9",
-              fontSize: 11,
-              fontFamily: FONTS.bodySemiBold,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              marginBottom: 8,
-            }}
-          >
-            {t("match:solo.contextLabel")}
-          </Text>
-          <TextInput
-            value={context}
-            onChangeText={(v) => {
-              setContext(v);
-              if (contextError) setContextError("");
-            }}
-            placeholder={t("match:solo.contextPlaceholder")}
-            placeholderTextColor="#4A3D5A"
-            multiline
-            numberOfLines={3}
-            style={{
-              backgroundColor: "#1A1520",
-              borderWidth: 1.5,
-              borderColor: contextError ? "#EF4444" : "#3D2E4A",
-              borderRadius: 14,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              color: "#FFFFFF",
-              fontSize: 14,
-              fontFamily: FONTS.body,
-              lineHeight: 20,
-              minHeight: 80,
-              textAlignVertical: "top",
-            }}
-          />
-          {contextError ? (
-            <Text
-              style={{
-                color: "#EF4444",
-                fontSize: 13,
-                fontFamily: FONTS.body,
-                marginTop: 6,
-              }}
-            >
-              {contextError}
-            </Text>
-          ) : (
-            <Text
-              style={{
-                color: "#4A3D5A",
-                fontSize: 12,
-                fontFamily: FONTS.body,
-                marginTop: 6,
-              }}
-            >
-              {t("match:solo.contextHint")}
-            </Text>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Start Game button */}
-      <View
-        className="my-6"
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 24,
-          paddingBottom: 36,
-          paddingTop: 16,
-          backgroundColor: "#0D0B14E8",
-        }}
-      >
-        <Button
-          className="min-w-full"
-          onPress={handleStart}
+        <MatchStartDock
           label={t("match:solo.startButton")}
-          icon={<PlayIcon />}
           loading={creatingMatch}
+          onPress={handleStart}
         />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  mainColumn: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+  },
+  heroSection: {
+    marginBottom: 22,
+  },
+  heading: {
+    fontSize: 30,
+    lineHeight: 38,
+    letterSpacing: 0.4,
+    paddingTop: 2,
+    color: UI_COLORS.textPrimary,
+  },
+  subheading: {
+    marginTop: 4,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+  },
+  childSection: {
+    width: "100%",
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    color: UI_COLORS.textMuted,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  childChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  childChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 6,
+    paddingRight: 14,
+    paddingVertical: 6,
+    borderRadius: UI_RADII.pill,
+    borderWidth: 1,
+  },
+  childChipDefault: {
+    backgroundColor: "#1A1520",
+    borderColor: "rgba(255, 255, 255, 0.06)",
+  },
+  childChipActive: {
+    backgroundColor: UI_COLORS.primary,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  childChipText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 13,
+    color: UI_COLORS.textSecondary,
+    maxWidth: 140,
+  },
+  childChipTextActive: {
+    color: "#FFFFFF",
+  },
+});

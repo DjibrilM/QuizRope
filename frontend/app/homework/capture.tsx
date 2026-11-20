@@ -1,48 +1,66 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
-  View,
-  Text,
-  Image,
   Alert,
+  Image,
+  ScrollView,
   StyleSheet,
-  Platform,
-  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import * as Crypto from "expo-crypto";
+import { useTranslation } from "react-i18next";
 import { apiService } from "../../src/services/api";
 import * as guestDb from "../../src/services/guestDb";
 import { useGameStore } from "../../src/stores/gameStore";
-import { AnimatedLoader, Button } from "../../src/components/common";
-import { FONTS } from "../../src/constants/theme";
-import { useTranslation } from "react-i18next";
-
-
-import { getDailyCount, incrementDailyCount, UPLOAD_LIMIT } from "../../src/hooks/useHomeworkLimit";
+import { AnimatedLoader } from "../../src/components/common";
+import { PillButton } from "../../src/components/ui";
+import { FONTS, UI_COLORS, UI_RADII, UI_SHADOWS } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
+import {
+  getDailyCount,
+  incrementDailyCount,
+  UPLOAD_LIMIT,
+} from "../../src/hooks/useHomeworkLimit";
+import { hapticsService } from "../../src/services/haptics";
 
 // 1024px maximum dimension keeps Gemini multimodal vision within 1 tile (~258 tokens) while preserving math/handwriting clarity
 const MAX_DIMENSION = 1024;
 
-async function compressForAnalysis(uri: string): Promise<{ uri: string; base64: string }> {
+async function compressForAnalysis(
+  uri: string,
+): Promise<{ uri: string; base64: string }> {
   const imageRef = await ImageManipulator.manipulate(uri)
     .resize({ width: MAX_DIMENSION })
     .renderAsync();
-  const result = await imageRef.saveAsync({ compress: 0.65, format: SaveFormat.JPEG, base64: true });
+  const result = await imageRef.saveAsync({
+    compress: 0.65,
+    format: SaveFormat.JPEG,
+    base64: true,
+  });
   return { uri: result.uri, base64: result.base64! };
 }
 
 export default function CaptureScreen() {
-  const { t } = useTranslation("homework");
+  const { t } = useTranslation(["homework", "common"]);
   const { childId } = useLocalSearchParams<{ childId?: string }>();
+  const insets = useSafeAreaInsets();
+  const { width: winW, height: winH } = useWindowDimensions();
 
-  const { userRole, parentUser, guestProfile } = useGameStore();
-  const userId = parentUser?._id ?? parentUser?.id ?? guestProfile?.guestId ?? "anonymous";
+  const { userRole, parentUser, guestProfile, locale } = useGameStore();
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
+  const userId =
+    parentUser?._id ?? parentUser?.id ?? guestProfile?.guestId ?? "anonymous";
 
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
@@ -58,14 +76,13 @@ export default function CaptureScreen() {
       setCapturedBase64(compressed.base64);
     } catch {
       Alert.alert(t("common:errors.error"), t("errors.processFailed"));
-
     } finally {
       setCompressing(false);
     }
   };
 
-  // Opens system camera without crop UI
   const handleCapture = async () => {
+    hapticsService.medium();
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
@@ -77,6 +94,7 @@ export default function CaptureScreen() {
   };
 
   const handlePickFromGallery = async () => {
+    hapticsService.selection();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
@@ -88,12 +106,14 @@ export default function CaptureScreen() {
   };
 
   const handleRetake = () => {
+    hapticsService.selection();
     setCapturedUri(null);
     setCapturedBase64(null);
   };
 
   const handleSubmit = async () => {
     if (!capturedUri) return;
+    hapticsService.medium();
 
     if (!__DEV__) {
       const count = await getDailyCount(userId);
@@ -109,7 +129,6 @@ export default function CaptureScreen() {
     setUploading(true);
     try {
       if (userRole === "guest") {
-        // Send compressed file as multipart; save base64 locally for offline display
         const result = await apiService.analyzeGuestHomework(capturedUri);
         const sessionId = Crypto.randomUUID();
         await guestDb.saveHomeworkSession({
@@ -128,216 +147,448 @@ export default function CaptureScreen() {
         await incrementDailyCount(userId);
         router.replace(`/homework/session/${sessionId}` as any);
       } else {
-        const session = await apiService.analyzeHomework(capturedUri, undefined, childId);
+        const session = await apiService.analyzeHomework(
+          capturedUri,
+          undefined,
+          childId,
+        );
         await incrementDailyCount(userId);
         router.replace(`/homework/processing?sessionId=${session._id}` as any);
       }
     } catch (err: any) {
       console.error("🚨 [Homework Capture Upload Error]:", err);
       setUploading(false);
-      Alert.alert(t("errors.uploadFailed"), err?.message ?? t("common:buttons.tryAgain"));
+      Alert.alert(
+        t("errors.uploadFailed"),
+        err?.message ?? t("common:buttons.tryAgain"),
+      );
     }
   };
 
-  if (!permission) return <View style={styles.bg} />;
+  if (!permission) {
+    return (
+      <View style={styles.root}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerStyle: { backgroundColor: "transparent" },
+            headerShadowVisible: false,
+            title: "",
+            headerBackVisible: true,
+            headerBackButtonDisplayMode: "minimal",
+            headerTintColor: "#FFFFFF",
+          }}
+        />
+      </View>
+    );
+  }
 
   if (compressing) {
     return (
-      <SafeAreaView style={[styles.bg, styles.center]}>
-        <AnimatedLoader size="lg" />
-        <Text style={[styles.hint, { marginTop: 16 }]}>{t("capture.preparing")}</Text>
-
-      </SafeAreaView>
-    );
-  }
-
-  // ── Preview after capture / pick ──────────────────────────────────────────
-  if (capturedUri) {
-    return (
-      <>
-        {Platform.OS === "ios" && (
-          <Stack.Screen options={{ headerShown: true, title: t("session.reviewTitle") }} />
-
-        )}
-        <SafeAreaView style={styles.bg} edges={["bottom"]}>
-          {Platform.OS === "android" && (
-            <Pressable onPress={handleRetake} style={styles.androidBack} hitSlop={12}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </Pressable>
-          )}
-          <Image
-            source={{ uri: capturedUri }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="contain"
-          />
-          <View className="py-5" style={[styles.sheet, styles.sheetAbsolute]}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.previewActions}>
-              <Button
-                variant="outline"
-                label={t("actions.retake")}
-
-                onPress={handleRetake}
-                disabled={uploading}
-                className="flex-1 max-w-none"
-              />
-              <Button
-                label={uploading ? undefined : t("actions.analyze")}
-
-                onPress={handleSubmit}
-                disabled={uploading}
-                className="flex-1 max-w-none"
-              >
-                {uploading ? <AnimatedLoader size="sm" color="#fff" /> : undefined}
-              </Button>
-            </View>
-          </View>
-        </SafeAreaView>
-      </>
-    );
-  }
-
-  // ── Capture screen ─────────────────────────────────────────────────────────
-  return (
-    <>
-      {Platform.OS === "ios" && (
-        <Stack.Screen options={{ headerShown: true, title: t("title") }} />
-
-      )}
-      <SafeAreaView style={styles.bg} edges={["bottom"]}>
-        {/* Live camera viewfinder as background */}
-        {permission.granted && (
-          <CameraView style={StyleSheet.absoluteFill} facing="back" />
-        )}
-
-        {Platform.OS === "android" && (
-          <Pressable onPress={() => router.back()} style={styles.androidBack} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </Pressable>
-        )}
-
-        {/* Bottom sheet */}
-        <View className="m-10 py-10" style={[styles.sheet, styles.sheetAbsolute]}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.hint}>{t("capture.hint")}</Text>
-
-          <View style={styles.captureRow}>
-            {/* Gallery picker */}
-            <Pressable style={styles.sideBtn} onPress={handlePickFromGallery} hitSlop={12}>
-              <Ionicons name="images-outline" size={26} color="#B8A9C9" />
-              <Text style={styles.sideBtnLabel}>{t("actions.library")}</Text>
-
-            </Pressable>
-
-            {/* Shutter — opens system camera with crop */}
-            <Pressable
-              style={styles.captureBtn}
-              onPress={permission.granted ? handleCapture : requestPermission}
-            >
-              <Ionicons name="camera" size={32} color="#FFFFFF" />
-            </Pressable>
-
-            {/* Balance spacer */}
-            <View style={styles.sideBtn} />
-          </View>
-
-          {!permission.granted && (
-            <Text style={[styles.hint, { marginTop: 8, marginBottom: 0 }]}>
-              {t("capture.allowAccess")}
-
-            </Text>
-          )}
+      <SafeAreaView style={styles.centerRoot}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerStyle: { backgroundColor: "transparent" },
+            headerShadowVisible: false,
+            title: "",
+            headerBackVisible: true,
+            headerBackButtonDisplayMode: "minimal",
+            headerTintColor: UI_COLORS.textPrimary,
+          }}
+        />
+        <View style={styles.preparingCard}>
+          <AnimatedLoader size="lg" color={UI_COLORS.primary} />
+          <Text style={styles.preparingText}>{t("capture.preparing")}</Text>
         </View>
       </SafeAreaView>
-    </>
+    );
+  }
+
+  // ── Photo review before upload ──────────────────────────────────────────────
+  if (capturedUri) {
+    const stageHeight = Math.max(
+      320,
+      winH - insets.top - Math.max(insets.bottom, 12) - 164,
+    );
+
+    return (
+      <View style={styles.root}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerStyle: { backgroundColor: "transparent" },
+            headerShadowVisible: false,
+            title: t("session.reviewTitle"),
+            headerTitleStyle: {
+              fontFamily: headingFont,
+              fontSize: 18,
+              color: "#FFFFFF",
+            },
+            headerBackVisible: true,
+            headerBackButtonDisplayMode: "minimal",
+            headerTintColor: "#FFFFFF",
+          }}
+        />
+
+        {/* Ambient blurred edge-to-edge backdrop so non-portrait sheets blend smoothly */}
+        <Image
+          source={{ uri: capturedUri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+          blurRadius={34}
+        />
+        <View style={styles.backdropScrim} pointerEvents="none" />
+
+        {/* Edge-to-edge pinch-zoomable photo stage */}
+        <ScrollView
+          style={styles.previewStage}
+          contentContainerStyle={[
+            styles.previewStageContent,
+            {
+              paddingTop: insets.top + 54,
+              paddingBottom: Math.max(insets.bottom, 12) + 96,
+            },
+          ]}
+          maximumZoomScale={3}
+          minimumZoomScale={1}
+          centerContent
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        >
+          <Image
+            source={{ uri: capturedUri }}
+            style={{ width: winW, height: stageHeight }}
+            resizeMode="contain"
+          />
+        </ScrollView>
+
+        {/* Top header contrast scrim */}
+        <LinearGradient
+          colors={[
+            "rgba(13, 11, 20, 0.85)",
+            "rgba(13, 11, 20, 0.42)",
+            "rgba(13, 11, 20, 0)",
+          ]}
+          locations={[0, 0.55, 1]}
+          style={[styles.topScrim, { height: insets.top + 78 }]}
+          pointerEvents="none"
+        />
+
+        {/* Bottom action overlay dock with smooth gradient */}
+        <LinearGradient
+          colors={[
+            "rgba(13, 11, 20, 0)",
+            "rgba(13, 11, 20, 0.86)",
+            UI_COLORS.bg,
+          ]}
+          locations={[0, 0.35, 1]}
+          style={[
+            styles.bottomReviewDock,
+            { paddingBottom: Math.max(insets.bottom, 14) + 8 },
+          ]}
+        >
+          <View style={styles.previewDock}>
+            <View style={styles.actionSlot}>
+              <PillButton
+                variant="secondary"
+                size="lg"
+                label={t("actions.retake")}
+                icon={<Ionicons name="refresh" size={17} color="#FFFFFF" />}
+                onPress={handleRetake}
+                disabled={uploading}
+                style={styles.retakePill}
+              />
+            </View>
+            <View style={styles.actionSlot}>
+              <PillButton
+                variant="primary"
+                size="lg"
+                label={t("actions.analyze")}
+                rightSlot={
+                  <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
+                }
+                loading={uploading}
+                onPress={handleSubmit}
+                style={styles.analyzePill}
+              />
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  // ── Camera viewfinder & capture dock ────────────────────────────────────────
+  return (
+    <View style={styles.root}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+          title: "",
+          headerBackVisible: true,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: "#FFFFFF",
+        }}
+      />
+
+      {permission.granted ? (
+        <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      ) : null}
+
+      {permission.granted ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.reticleArea,
+            {
+              paddingTop: insets.top + 68,
+              paddingBottom: Math.max(insets.bottom, 14) + 92,
+            },
+          ]}
+        >
+          <View style={styles.reticleFrame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.permissionWrap,
+            {
+              paddingTop: insets.top + 68,
+              paddingBottom: Math.max(insets.bottom, 14) + 92,
+            },
+          ]}
+        >
+          <View style={styles.permissionCard}>
+            <View style={styles.permissionHalo}>
+              <Ionicons
+                name="camera-outline"
+                size={28}
+                color="#A78BFA"
+              />
+            </View>
+            <Text style={styles.permissionText}>
+              {t("capture.allowAccess")}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      <View
+        style={[
+          styles.bottomFloatingDock,
+          { paddingBottom: Math.max(insets.bottom, 14) + 8 },
+        ]}
+      >
+        <View style={styles.previewDock}>
+          <View style={styles.actionSlot}>
+            <PillButton
+              variant="secondary"
+              size="lg"
+              label={t("actions.library")}
+              icon={
+                <Ionicons
+                  name="images-outline"
+                  size={18}
+                  color={UI_COLORS.textPrimary}
+                />
+              }
+              onPress={handlePickFromGallery}
+              style={styles.retakePill}
+            />
+          </View>
+          <View style={styles.actionSlot}>
+            <PillButton
+              variant="primary"
+              size="lg"
+              label={t("actions.takePhoto")}
+              icon={<Ionicons name="camera" size={18} color="#FFFFFF" />}
+              onPress={permission.granted ? handleCapture : requestPermission}
+              style={styles.analyzePill}
+            />
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
 
+const CORNER_SIZE = 24;
+const CORNER_THICKNESS = 3;
+
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: "#0D0B14" },
-  center: {
+  root: {
     flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  centerRoot: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
+    padding: 24,
   },
-
-  sheetAbsolute: {
+  preparingCard: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 28,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    paddingVertical: 28,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    gap: 14,
+  },
+  preparingText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 14,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+  },
+  backdropScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(13, 11, 20, 0.56)",
+  },
+  previewStage: {
+    flex: 1,
+  },
+  previewStageContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomReviewDock: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    paddingTop: 28,
+    paddingHorizontal: 16,
   },
-  sheet: {
-    backgroundColor: "#1A1520",
-    borderRadius: 28,
-    marginHorizontal: 22,
-    marginBottom: 32,
-    paddingTop: 12,
-    paddingHorizontal: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 20,
+  bottomFloatingDock: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
   },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#3D2E4A",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-
-  hint: {
-    color: "#7B6B8A",
-    fontSize: 13,
-    fontFamily: FONTS.body,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  captureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  captureBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#6C5CE7",
+  reticleArea: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6C5CE7",
-    shadowOpacity: 0.55,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
+    paddingHorizontal: 22,
   },
-  sideBtn: {
-    width: 60,
-    alignItems: "center",
-    gap: 4,
+  reticleFrame: {
+    width: "100%",
+    maxWidth: 420,
+    flex: 1,
+    maxHeight: "92%",
+    position: "relative",
   },
-  sideBtnLabel: {
-    color: "#7B6B8A",
-    fontSize: 11,
-    fontFamily: FONTS.bodySemiBold,
-  },
-
-  previewActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 8,
-  },
-
-  androidBack: {
+  corner: {
     position: "absolute",
-    top: 48,
-    left: 16,
-    zIndex: 10,
-    padding: 8,
+    width: CORNER_SIZE,
+    height: CORNER_SIZE,
+    borderColor: "rgba(255, 255, 255, 0.72)",
+  },
+  cornerTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderTopLeftRadius: 16,
+  },
+  cornerTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderTopRightRadius: 16,
+  },
+  cornerBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderBottomLeftRadius: 16,
+  },
+  cornerBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderBottomRightRadius: 16,
+  },
+  permissionWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  permissionCard: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 28,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    gap: 12,
+    maxWidth: 340,
+  },
+  permissionHalo: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(108, 92, 231, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  permissionText: {
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+  },
+  previewDock: {
+    backgroundColor: "rgba(22, 18, 33, 0.92)",
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.09)",
+    padding: 6,
+    flexDirection: "row",
+    gap: 8,
+    maxWidth: 480,
+    width: "100%",
+    alignSelf: "center",
+  },
+  actionSlot: {
+    flex: 1,
+  },
+  retakePill: {
+    backgroundColor: UI_COLORS.surfaceElevated,
+  },
+  analyzePill: {
+    ...UI_SHADOWS.primaryGlow,
   },
 });

@@ -6,5 +6,12 @@
   "gamesPlayed_one": "{{count}}ゲームプレイ済み",
   "gamesPlayed_other": "{{count}}ゲームプレイ済み",
   "correct": "正解",
-  "accuracy": "正答率"
+  "accuracy": "正答率",
+  "yourProfile": "プロフィール",
+  "tapForStats": "タップして詳しい成績を見る",
+  "recentMatches": "最近の対戦",
+  "bySubject": "教科別",
+  "noMatchesYet": "まだプレイ履歴がありません",
+  "noSubjectDataYet": "まだ教科別のデータがありません",
+  "scoreRatio": "スコア: {{score}} / {{max}}"
 }

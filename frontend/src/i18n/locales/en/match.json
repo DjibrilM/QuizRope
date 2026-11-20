@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "Solo - {{subject}}",
+    "setupTitle": "Set Your Challenge",
+    "setupSubtitle": "Choose a difficulty level, rounds, and optional focus",
     "startButton": "Start Game",
     "contextLabel": "Customize Your Practice",
     "contextPlaceholder": "e.g. square roots, fractions with denominators up to 20...",
@@ -86,6 +88,7 @@
   },
   "split": {
     "title": "Split Screen · {{subject}}",
+    "setupTitle": "Battle Setup",
     "subtitle": "Two players · Same device",
     "ageGroupLabel": "Age Group",
     "playersLabel": "Players",

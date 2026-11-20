@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "فردي - {{subject}}",
+    "setupTitle": "اضبط التحدي",
+    "setupSubtitle": "اختر مستوى الصعوبة وعدد الجولات ومجال التركيز",
     "startButton": "ابدأ اللعبة",
     "contextLabel": "خصّص تدريبك",
     "contextPlaceholder": "مثال: الجذور التربيعية، الكسور بمقامات حتى 20…",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "شاشة مقسمة · {{subject}}",
+    "setupTitle": "إعداد المواجهة",
     "subtitle": "لاعبان · نفس الجهاز",
     "ageGroupLabel": "الفئة العمرية",
     "playersLabel": "اللاعبون",

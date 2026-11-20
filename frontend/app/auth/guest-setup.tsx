@@ -1,36 +1,166 @@
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ScrollView,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, Stack } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Blur,
+  Canvas,
+  Group,
+  Image as SkiaImage,
+  Skia,
+  useImage,
+} from "@shopify/react-native-skia";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import * as Crypto from "expo-crypto";
+import { useTranslation } from "react-i18next";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { useGameStore } from "../../src/stores/gameStore";
 import { apiService } from "../../src/services/api";
 import { hapticsService } from "../../src/services/haptics";
 import { AVATARS } from "../../src/config/avatars";
-import { AvatarIcon } from "../../src/components/common/AvatarIcons";
-import { FONTS } from "../../src/constants/theme";
-import { Button, ScreenHeader } from "@/components/common";
+import {
+  AvatarIcon,
+  getAvatarSource,
+} from "../../src/components/common/AvatarIcons";
+import { AvatarPicker } from "../../src/components/children";
+import { AppInput, PillButton } from "../../src/components/ui";
+import { FONTS, UI_COLORS } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
 
-const RANDOM_AVATAR = AVATARS[Math.floor(Math.random() * AVATARS.length)].id;
+const HERO_INNER_SIZE = 98;
+
+const getRandomAvatar = (exclude?: string) => {
+  const pool = exclude
+    ? AVATARS.filter((item) => item.id !== exclude)
+    : AVATARS;
+  return pool[Math.floor(Math.random() * pool.length)].id;
+};
+
+function BlurRevealAvatar({
+  avatarId,
+  size,
+}: {
+  avatarId: string;
+  size: number;
+}) {
+  const source = getAvatarSource(avatarId);
+  const skImage = useImage(source ?? null);
+  const blurRadius = useSharedValue(18);
+  const revealOpacity = useSharedValue(0.35);
+  const revealScale = useSharedValue(0.95);
+
+  const clipPath = useMemo(() => {
+    const path = Skia.Path.Make();
+    path.addCircle(size / 2, size / 2, size / 2);
+    return path;
+  }, [size]);
+
+  useEffect(() => {
+    blurRadius.value = 18;
+    revealOpacity.value = 0.45;
+    revealScale.value = 0.95;
+
+    blurRadius.value = withTiming(0, {
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+    });
+    revealOpacity.value = withTiming(1, {
+      duration: 320,
+      easing: Easing.out(Easing.quad),
+    });
+    revealScale.value = withTiming(1, {
+      duration: 360,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [avatarId, blurRadius, revealOpacity, revealScale]);
+
+  const animatedWrapStyle = useAnimatedStyle(() => ({
+    opacity: revealOpacity.value,
+    transform: [{ scale: revealScale.value }],
+  }));
+
+  if (!source) {
+    return <AvatarIcon avatarId={avatarId} size={size} />;
+  }
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          overflow: "hidden",
+          backgroundColor: "#1D172B",
+        },
+        animatedWrapStyle,
+      ]}
+    >
+      {/* Frame-0 placeholder while Skia decodes decoded texture */}
+      {!skImage ? (
+        <Image
+          source={source}
+          resizeMode="cover"
+          blurRadius={12}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+        />
+      ) : (
+        <Canvas style={{ width: size, height: size }}>
+          <Group clip={clipPath}>
+            <SkiaImage
+              image={skImage}
+              x={0}
+              y={0}
+              width={size}
+              height={size}
+              fit="cover"
+            >
+              <Blur blur={blurRadius} mode="clamp" />
+            </SkiaImage>
+          </Group>
+        </Canvas>
+      )}
+    </Animated.View>
+  );
+}
 
 export default function GuestSetupScreen() {
-  const { t } = useTranslation(["common", "auth"]);
+  const { t } = useTranslation(["common", "auth", "children"]);
   usePortrait();
 
-  const { setGuestProfile, setGhostToken } = useGameStore();
+  const { setGuestProfile, setGhostToken, locale } = useGameStore();
   const [name, setName] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState(RANDOM_AVATAR);
+  const [selectedAvatar, setSelectedAvatar] = useState(() => getRandomAvatar());
   const [nameError, setNameError] = useState("");
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const contentTop = Math.max(headerHeight, insets.top + 52) + 8;
+
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
+
+  const handleShuffle = () => {
+    hapticsService.selection();
+    setSelectedAvatar((prev) => getRandomAvatar(prev));
+  };
 
   const handleStart = async () => {
     const trimmed = name.trim();
@@ -56,8 +186,6 @@ export default function GuestSetupScreen() {
       avatarId: selectedAvatar,
     });
 
-    // Register the ghost profile with the backend to get a ghost JWT for API access.
-    // Fire-and-forget — if it fails, ghost mode still works but won't store server-side data.
     apiService
       .registerGhost(guestId, trimmed)
       .then(({ token }) => {
@@ -70,164 +198,188 @@ export default function GuestSetupScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0D0B14" }}>
-      <ScreenHeader title={t("auth:guest.setupTitle")} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+    <SafeAreaView style={styles.root} edges={["bottom"]}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+          title: "",
+          headerBackVisible: true,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: UI_COLORS.textPrimary,
+        }}
+      />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            alignItems: "center",
-            paddingHorizontal: 12,
-            paddingTop: 32,
-            paddingBottom: 40,
-          }}
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: contentTop },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Title */}
-          <Text
-            style={{
-              fontSize: 32,
-              color: "#FFFFFF",
-              fontFamily: "LuckiestGuy_400Regular",
-              textAlign: "center",
-              marginBottom: 8,
-            }}
-          >
-            {t("auth:guest.setupTitle")}
-          </Text>
-          <Text
-            style={{
-              fontSize: 15,
-              color: "#B8A9C9",
-              fontFamily: FONTS.body,
-              textAlign: "center",
-              marginBottom: 36,
-            }}
-          >
-            {t("auth:guest.setupSubtitle")}
-          </Text>
+          <View style={styles.mainColumn}>
+            {/* Editorial Heading */}
+            <View style={styles.heroSection}>
+              <Text style={[styles.heading, { fontFamily: headingFont }]}>
+                {t("auth:guest.setupTitle")}
+              </Text>
+              <Text style={styles.subheading}>
+                {t("auth:guest.setupSubtitle")}
+              </Text>
+            </View>
 
-          {/* Selected avatar preview */}
-          <View
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: "rgba(255, 255, 255, 0.04)",
-              borderWidth: 1,
-              borderColor: "rgba(255, 255, 255, 0.08)",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 28,
-            }}
-          >
-            <AvatarIcon avatarId={selectedAvatar} size={64} />
-          </View>
+            {/* Clean circular preview with GPU blur-reveal animation */}
+            <View style={styles.previewWrap}>
+              <View style={styles.previewBall}>
+                <BlurRevealAvatar
+                  avatarId={selectedAvatar}
+                  size={HERO_INNER_SIZE}
+                />
+              </View>
+            </View>
 
-          {/* Avatar picker */}
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 10,
-              justifyContent: "center",
-              marginBottom: 32,
-            }}
-          >
-            {AVATARS.map((avatar) => (
-              <Pressable
-                key={avatar.id}
-                onPress={() => {
-                  hapticsService.selection();
-                  setSelectedAvatar(avatar.id);
+            {/* Avatar Grid */}
+            <View style={styles.pickerSection}>
+              <AvatarPicker
+                selected={selectedAvatar}
+                onSelect={setSelectedAvatar}
+                tileSize={64}
+                rightAction={
+                  <TouchableOpacity
+                    onPress={handleShuffle}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Randomize avatar"
+                    style={styles.shufflePill}
+                  >
+                    <Ionicons
+                      name="shuffle"
+                      size={14}
+                      color={UI_COLORS.textPrimary}
+                    />
+                  </TouchableOpacity>
+                }
+              />
+            </View>
+
+            {/* Twende-style Player Name Input */}
+            <View style={styles.inputGroup}>
+              <AppInput
+                label={t("auth:guest.nameLabel")}
+                value={name}
+                onChangeText={(v) => {
+                  setName(v);
+                  if (nameError) setNameError("");
                 }}
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor:
-                    selectedAvatar === avatar.id ? "rgba(255, 255, 255, 0.04)" : "transparent",
-                  borderWidth: 1.5,
-                  borderColor:
-                    selectedAvatar === avatar.id ? "#A78BFA" : "rgba(255, 255, 255, 0.04)",
+                placeholder={t("auth:guest.namePlaceholder")}
+                maxLength={20}
+                error={nameError}
+                leftIcon={
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={
+                      nameError ? UI_COLORS.coral : UI_COLORS.textSecondary
+                    }
+                  />
+                }
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  void handleStart();
                 }}
-              >
-                <AvatarIcon avatarId={avatar.id} size={34} />
-              </Pressable>
-            ))}
-          </View>
+              />
+            </View>
 
-          {/* Name input */}
-          <View style={{ width: "100%", marginBottom: 28 }}>
-            <Text
-              style={{
-                color: "#B8A9C9",
-                fontSize: 13,
-                fontFamily: FONTS.bodySemiBold,
-                marginBottom: 8,
-                letterSpacing: 0.5,
+            {/* Primary CTA */}
+            <PillButton
+              label={t("auth:guest.startButton", "Let's Play!")}
+              onPress={() => {
+                void handleStart();
               }}
-            >
-              {t("auth:guest.nameLabel")}
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={(v) => {
-                setName(v);
-                setNameError("");
-              }}
-              placeholder={t("auth:guest.namePlaceholder")}
-              placeholderTextColor="#9CA3AF"
-              maxLength={20}
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.04)",
-                borderRadius: 14,
-                paddingHorizontal: 18,
-                paddingVertical: 14,
-                fontSize: 18,
-                color: "#FFFFFF",
-                fontFamily: FONTS.bodyBold,
-                borderWidth: 1,
-                borderColor: nameError ? "#EF4444" : "rgba(255, 255, 255, 0.08)",
-              }}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleStart}
+              size="lg"
             />
-            {nameError !== "" && (
-              <Text
-                style={{
-                  color: "#EF4444",
-                  fontSize: 12,
-                  fontFamily: FONTS.body,
-                  marginTop: 6,
-                }}
-              >
-                {nameError}
-              </Text>
-            )}
-          </View>
-
-          {/* Start button */}
-          <View className="w-full">
-            <Button className="w-full min-w-full" onPress={handleStart}>
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  fontSize: 20,
-                  fontFamily: "LuckiestGuy_400Regular",
-                  letterSpacing: 1,
-                }}
-              >
-                {t("auth:guest.startButton")}
-              </Text>
-            </Button>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 28,
+  },
+  mainColumn: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+  },
+  heroSection: {
+    marginBottom: 20,
+  },
+  heading: {
+    fontSize: 30,
+    lineHeight: 38,
+    letterSpacing: 0.4,
+    paddingTop: 2,
+    color: UI_COLORS.textPrimary,
+  },
+  subheading: {
+    marginTop: 4,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+  },
+  previewWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  previewBall: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: "#1D172B",
+    borderWidth: 2.5,
+    borderColor: UI_COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  pickerSection: {
+    marginBottom: 24,
+  },
+  shufflePill: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputGroup: {
+    width: "100%",
+    marginBottom: 22,
+  },
+});

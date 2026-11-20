@@ -8,5 +8,12 @@
   "gamesPlayed_many": "{{count}} игр сыграно",
   "gamesPlayed_other": "{{count}} игр сыграно",
   "correct": "Правильных",
-  "accuracy": "Точность"
+  "accuracy": "Точность",
+  "yourProfile": "Твой профиль",
+  "tapForStats": "Нажми, чтобы открыть полную статистику",
+  "recentMatches": "Недавние матчи",
+  "bySubject": "По предметам",
+  "noMatchesYet": "Матчи ещё не сыграны",
+  "noSubjectDataYet": "Пока нет данных по предметам",
+  "scoreRatio": "Счёт: {{score}} / {{max}}"
 }

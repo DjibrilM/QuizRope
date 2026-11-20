@@ -31,7 +31,42 @@
     "playAgain": "Jugar de nuevo",
     "backToHome": "Volver al inicio",
     "wellDone": "¡Bien hecho!",
-    "finalScore": "Puntuación final: {{score}}"
+    "keepPracticing": "¡Sigue practicando!",
+    "finalScore": "Puntuación final: {{score}}",
+    "reviewAnswers": "Revisar respuestas"
+  },
+  "buddy": {
+    "streak3": "¡En racha! ¡3 seguidas!",
+    "streak5": "¡Imparable!",
+    "fast": "¡Rápido como un rayo!",
+    "timeout": "¡Se acabó el tiempo! ¡Atento al siguiente!",
+    "streakLost": "Se rompió la racha — ¡vuelve a intentarlo!",
+    "wrong1": "Casi — ¡tú puedes con la siguiente!",
+    "wrongStreak": "Respira y lee bien cada opción.",
+    "recovery": "¡De vuelta en el ritmo!"
+  },
+  "correction": {
+    "title": "Revisión completa",
+    "question": "Pregunta {{number}}",
+    "summary": "{{correct}} / {{total}} correctas",
+    "questionsCount": "{{count}} preguntas",
+    "missed": "Falladas",
+    "questionMap": "Mapa de preguntas",
+    "avgSpeed": "Prom. {{time}}s",
+    "filterAll": "Todas",
+    "filterMissed": "Falladas",
+    "filterCorrect": "Correctas",
+    "statusCorrect": "Correcta",
+    "statusWrong": "Incorrecta",
+    "statusSkipped": "Tiempo agotado",
+    "perfectFilterTitle": "¡Pleno!",
+    "perfectFilterSubtitle": "Acertaste todas las preguntas — nada fallado que revisar.",
+    "noCorrectFilterSubtitle": "No hay respuestas correctas en esta partida.",
+    "showAll": "Ver todas",
+    "explanation": "Explicación",
+    "skipped": "Se acabó el tiempo — sin respuesta",
+    "empty": "No hay respuestas para revisar",
+    "done": "Listo"
   },
   "scoreboard": {
     "score": "Puntuación"

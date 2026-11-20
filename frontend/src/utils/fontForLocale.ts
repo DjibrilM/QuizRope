@@ -4,8 +4,12 @@ import i18n from '../i18n';
 const LATIN_LOCALES = new Set(['en', 'es', 'fr', 'pt']);
 const CYRILLIC_LOCALES = new Set(['ru']);
 
+function getBaseLang(): string {
+  return (i18n.language || 'en').split(/[-_]/)[0].toLowerCase();
+}
+
 export function getHeadingFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang)) {
     return FONTS.heading;
   }
@@ -13,7 +17,7 @@ export function getHeadingFont(): string {
 }
 
 export function getAccentFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang)) {
     return FONTS.accent;
   }
@@ -21,7 +25,7 @@ export function getAccentFont(): string {
 }
 
 export function getBodyFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang) || CYRILLIC_LOCALES.has(lang)) {
     return FONTS.body;
   }
@@ -29,7 +33,7 @@ export function getBodyFont(): string {
 }
 
 export function getBodySemiBoldFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang) || CYRILLIC_LOCALES.has(lang)) {
     return FONTS.bodySemiBold;
   }
@@ -37,7 +41,7 @@ export function getBodySemiBoldFont(): string {
 }
 
 export function getBodyBoldFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang) || CYRILLIC_LOCALES.has(lang)) {
     return FONTS.bodyBold;
   }
@@ -45,7 +49,7 @@ export function getBodyBoldFont(): string {
 }
 
 export function getBodyExtraBoldFont(): string {
-  const lang = i18n.language;
+  const lang = getBaseLang();
   if (LATIN_LOCALES.has(lang) || CYRILLIC_LOCALES.has(lang)) {
     return FONTS.bodyExtraBold;
   }

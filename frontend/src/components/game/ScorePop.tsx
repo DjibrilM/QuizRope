@@ -1,26 +1,35 @@
 import { memo, useEffect } from "react";
 import { Text } from "react-native";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
   Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
 } from "react-native-reanimated";
+import { FONTS, UI_COLORS } from "../../constants/theme";
 
-export const ScorePop = memo(function ScorePop({ side }: { side: "left" | "right" }) {
+export const ScorePop = memo(function ScorePop({
+  side,
+}: {
+  side: "left" | "right";
+}) {
+  void side;
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
     translateY.value = 0;
     opacity.value = 1;
-    translateY.value = withTiming(-32, { duration: 600, easing: Easing.out(Easing.cubic) });
+    translateY.value = withTiming(-28, {
+      duration: 550,
+      easing: Easing.out(Easing.cubic),
+    });
     opacity.value = withSequence(
       withTiming(1, { duration: 50 }),
-      withTiming(0, { duration: 500 }),
+      withTiming(0, { duration: 480 }),
     );
-  }, []);
+  }, [opacity, translateY]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -35,7 +44,13 @@ export const ScorePop = memo(function ScorePop({ side }: { side: "left" | "right
 
   return (
     <Animated.View style={style}>
-      <Text style={{ color: "#10B981", fontSize: 16, fontFamily: "Bungee_400Regular" }}>
+      <Text
+        style={{
+          color: UI_COLORS.mint,
+          fontSize: 14,
+          fontFamily: FONTS.bodyExtraBold,
+        }}
+      >
         +10
       </Text>
     </Animated.View>

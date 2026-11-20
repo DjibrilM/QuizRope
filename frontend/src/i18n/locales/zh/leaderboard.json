@@ -6,5 +6,12 @@
   "gamesPlayed_one": "已玩 {{count}} 场游戏",
   "gamesPlayed_other": "已玩 {{count}} 场游戏",
   "correct": "正确",
-  "accuracy": "正确率"
+  "accuracy": "正确率",
+  "yourProfile": "你的档案",
+  "tapForStats": "点击查看完整统计",
+  "recentMatches": "最近比赛",
+  "bySubject": "按学科",
+  "noMatchesYet": "还没有比赛记录",
+  "noSubjectDataYet": "暂无学科数据",
+  "scoreRatio": "得分：{{score}} / {{max}}"
 }
