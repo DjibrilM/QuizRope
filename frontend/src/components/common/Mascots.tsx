@@ -706,7 +706,7 @@ function OrbEyeLayer({
 
 interface MascotProps {
   size?: number;
-  variant?: "floatUp" | "headSideBounce";
+  variant?: "floatUp" | "headSideBounce" | "splashPop" | "welcome";
   speed?: number;
   state?: OrbState;
   expression?: OrbExpressionName | Expression;
@@ -1105,6 +1105,109 @@ export function BrainMascot({
       return;
     }
 
+    if (variant === "welcome") {
+      // Gentle rise into frame, squash settle, joyful left-right greeting sway/wave, and polite nod
+      gestureX.value = withSequence(
+        withTiming(0, { duration: 640 }),
+        withTiming(-8 * pxScale, {
+          duration: 320,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withTiming(8 * pxScale, {
+          duration: 380,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withSpring(0, { damping: 14, stiffness: 130 }),
+      );
+      gestureY.value = withSequence(
+        withTiming(18 * pxScale, { duration: 40 }),
+        withTiming(-8 * pxScale, {
+          duration: 380,
+          easing: Easing.out(Easing.cubic),
+        }),
+        withTiming(4 * pxScale, {
+          duration: 220,
+          easing: Easing.inOut(Easing.quad),
+        }),
+        withTiming(-11 * pxScale, {
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+        }),
+        withTiming(-9 * pxScale, {
+          duration: 360,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withSpring(0, { damping: 14, stiffness: 140 }),
+        withDelay(
+          160,
+          withSequence(
+            withTiming(4 * pxScale, {
+              duration: 160,
+              easing: Easing.inOut(Easing.quad),
+            }),
+            withSpring(0, { damping: 15, stiffness: 160 }),
+          ),
+        ),
+      );
+      gestureScaleX.value = withSequence(
+        withTiming(0.84, { duration: 220, easing: Easing.out(Easing.quad) }),
+        withTiming(1.08, { duration: 200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.95, { duration: 220, easing: Easing.inOut(Easing.quad) }),
+        withSpring(1, { damping: 15, stiffness: 150 }),
+      );
+      gestureScaleY.value = withSequence(
+        withTiming(1.14, { duration: 220, easing: Easing.out(Easing.quad) }),
+        withTiming(0.92, { duration: 200, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.05, { duration: 220, easing: Easing.inOut(Easing.quad) }),
+        withSpring(1, { damping: 15, stiffness: 150 }),
+      );
+      gestureRotate.value = withSequence(
+        withTiming(-6, { duration: 420, easing: Easing.out(Easing.ease) }),
+        withTiming(-11, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+        withTiming(11, { duration: 380, easing: Easing.inOut(Easing.ease) }),
+        withSpring(0, { damping: 14, stiffness: 140 }),
+      );
+      shadowScale.value = 1;
+      shadowOpacity.value = 0.85;
+      return;
+    }
+
+    if (variant === "splashPop") {
+      gestureX.value = 0;
+      gestureY.value = withSequence(
+        withTiming(-20 * pxScale, { duration: 40 }),
+        withTiming(5 * pxScale, {
+          duration: 380,
+          easing: Easing.out(Easing.cubic),
+        }),
+        withTiming(-5 * pxScale, {
+          duration: 280,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withSpring(0, { damping: 16, stiffness: 130 }),
+      );
+      gestureScaleX.value = withSequence(
+        withTiming(0.86, { duration: 160, easing: Easing.out(Easing.quad) }),
+        withTiming(1.11, { duration: 240, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.96, { duration: 260, easing: Easing.inOut(Easing.quad) }),
+        withSpring(1, { damping: 16, stiffness: 140 }),
+      );
+      gestureScaleY.value = withSequence(
+        withTiming(1.14, { duration: 160, easing: Easing.out(Easing.quad) }),
+        withTiming(0.89, { duration: 240, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1.04, { duration: 260, easing: Easing.inOut(Easing.quad) }),
+        withSpring(1, { damping: 16, stiffness: 140 }),
+      );
+      gestureRotate.value = withSequence(
+        withTiming(-6, { duration: 240, easing: Easing.out(Easing.ease) }),
+        withTiming(4, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+        withSpring(0, { damping: 16, stiffness: 140 }),
+      );
+      shadowScale.value = 1;
+      shadowOpacity.value = 0.85;
+      return;
+    }
+
     gestureX.value = withSpring(0, { damping: 18, stiffness: 180 });
     gestureY.value = withSpring(0, { damping: 18, stiffness: 180 });
     gestureScaleX.value = withSpring(1, { damping: 18, stiffness: 180 });
@@ -1123,6 +1226,7 @@ export function BrainMascot({
     pxScale,
     shadowOpacity,
     shadowScale,
+    variant,
   ]);
 
   // Autonomous living-creature expression & curiosity beats when idle
@@ -1202,9 +1306,45 @@ export function BrainMascot({
     };
   }, [gazeX, gazeY, isIdleAuto, moodHopSV, moodTiltSV]);
 
-  // Non-idle gaze behaviors (thinking saccades, error downcast, done perk)
+  // Non-idle gaze behaviors (thinking saccades, error downcast, done perk, splash glance)
   useEffect(() => {
     if (isIdleAuto) return;
+
+    if (variant === "welcome") {
+      // Glance playfully at the wordmark below, then greet the user warmly
+      gazeX.value = withSequence(
+        withTiming(-0.4 * GAZE_RANGE, { duration: 280 }),
+        withDelay(
+          360,
+          withSequence(
+            withTiming(-0.55 * GAZE_RANGE, { duration: 260 }),
+            withTiming(0.55 * GAZE_RANGE, { duration: 340 }),
+            withSpring(0, GAZE_SPRING),
+          ),
+        ),
+      );
+      gazeY.value = withSequence(
+        withTiming(0.45 * GAZE_RANGE, { duration: 280 }),
+        withDelay(
+          360,
+          withSpring(-0.18 * GAZE_RANGE, GAZE_SPRING),
+        ),
+      );
+      return;
+    }
+
+    if (variant === "splashPop") {
+      // Glance gently down toward the QUIZROPE wordmark, then settle looking forward
+      gazeX.value = withSequence(
+        withTiming(0.22 * GAZE_RANGE, { duration: 280 }),
+        withDelay(520, withSpring(0, GAZE_SPRING)),
+      );
+      gazeY.value = withSequence(
+        withTiming(0.55 * GAZE_RANGE, { duration: 280 }),
+        withDelay(520, withSpring(-0.15 * GAZE_RANGE, GAZE_SPRING)),
+      );
+      return;
+    }
 
     if (isError) {
       gazeX.value = withSpring(-0.24 * GAZE_RANGE, GAZE_SPRING);
@@ -1247,7 +1387,7 @@ export function BrainMascot({
       mounted = false;
       clearTimeout(glanceTimer);
     };
-  }, [gazeX, gazeY, isDone, isError, isIdleAuto, isThinking]);
+  }, [gazeX, gazeY, isDone, isError, isIdleAuto, isThinking, variant]);
 
   // Asymmetric elastic, volume-preserving blink with micro-overshoot & double-blink
   useEffect(() => {

@@ -51,6 +51,7 @@ class FirebaseAuthService {
       user: {
         email: userCredential.user.email,
         displayName: userCredential.user.displayName,
+        photoURL: userCredential.user.photoURL || response.data?.user?.photo || null,
         uid: userCredential.user.uid,
       },
     };
@@ -87,6 +88,7 @@ class FirebaseAuthService {
       user: {
         email: userCredential.user.email,
         displayName: userCredential.user.displayName,
+        photoURL: userCredential.user.photoURL || null,
         uid: userCredential.user.uid,
       },
     };

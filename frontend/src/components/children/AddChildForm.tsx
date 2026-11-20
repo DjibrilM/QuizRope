@@ -1,13 +1,27 @@
-import React, { useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { AVATARS } from "../../config/avatars";
+import { hapticsService } from "../../services/haptics";
+import { AvatarIcon } from "../common/AvatarIcons";
 import { AvatarPicker } from "./AvatarPicker";
-import { BouncePress } from "../common/BouncePress";
-import { FONTS } from "../../constants/theme";
+import { AppInput, PillButton } from "../ui";
+import { UI_COLORS } from "../../constants/theme";
 
 interface AddChildFormProps {
-  onSave: (data: { displayName: string; grade: string; avatarUrl: string }) => void;
+  onSave: (data: {
+    displayName: string;
+    grade: string;
+    avatarUrl: string;
+  }) => void;
   onCancel: () => void;
+  loading?: boolean;
 }
 
 interface FormErrors {
@@ -15,12 +29,23 @@ interface FormErrors {
   grade?: string;
 }
 
-export function AddChildForm({ onSave, onCancel }: AddChildFormProps) {
+function getNextRandomAvatar(exclude: string): string {
+  const pool = AVATARS.filter((item) => item.id !== exclude);
+  if (pool.length === 0) return AVATARS[0].id;
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
+export function AddChildForm({
+  onSave,
+  onCancel,
+  loading = false,
+}: AddChildFormProps) {
   const { t } = useTranslation(["children", "common"]);
   const [name, setName] = useState("");
   const [grade, setGrade] = useState("");
   const [avatar, setAvatar] = useState("lion");
   const [errors, setErrors] = useState<FormErrors>({});
+  const gradeInputRef = useRef<TextInput>(null);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -41,97 +66,176 @@ export function AddChildForm({ onSave, onCancel }: AddChildFormProps) {
   };
 
   const handleSave = () => {
-    if (!validate()) return;
+    if (loading || !validate()) return;
 
+    setErrors({});
+    hapticsService.success();
     onSave({
       displayName: name.trim(),
       grade: grade.trim(),
       avatarUrl: avatar,
     });
-    setName("");
-    setGrade("");
-    setAvatar("lion");
-    setErrors({});
   };
 
-  const inputStyle = {
-    backgroundColor: "#0D0B14",
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontFamily: FONTS.body,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+  const handleShuffleAvatar = () => {
+    hapticsService.selection();
+    setAvatar((prev) => getNextRandomAvatar(prev));
   };
 
   return (
-    <View>
-      <AvatarPicker selected={avatar} onSelect={setAvatar} />
-
-      <TextInput
-        value={name}
-        onChangeText={(t) => {
-          setName(t);
-          if (errors.name) setErrors((e) => ({ ...e, name: undefined }));
-        }}
-        placeholder={t("form.namePlaceholder")}
-        placeholderTextColor="#7B6B8A"
-        style={[
-          inputStyle,
-          { borderColor: errors.name ? "#EF4444" : "#3D2E4A", marginBottom: 4 },
-        ]}
-      />
-      {errors.name && (
-        <Text style={{ color: "#EF4444", fontSize: 13, fontFamily: FONTS.body, marginBottom: 8, marginLeft: 8 }}>{errors.name}</Text>
-      )}
-      {!errors.name && <View style={{ marginBottom: 8 }} />}
-
-      <View style={{ marginBottom: 4 }}>
-        <TextInput
-          value={grade}
-          onChangeText={(t) => {
-            setGrade(t);
-            if (errors.grade) setErrors((e) => ({ ...e, grade: undefined }));
-          }}
-          placeholder={t("form.gradePlaceholder")}
-          placeholderTextColor="#7B6B8A"
-          style={[
-            inputStyle,
-            { borderColor: errors.grade ? "#EF4444" : "#3D2E4A" },
-          ]}
-        />
-        {errors.grade && (
-          <Text style={{ color: "#EF4444", fontSize: 13, fontFamily: FONTS.body, marginTop: 4, marginLeft: 8 }}>{errors.grade}</Text>
-        )}
+    <View style={styles.container}>
+      {/* Live Avatar Preview */}
+      <View style={styles.previewWrap}>
+        <View style={styles.previewRing}>
+          <AvatarIcon avatarId={avatar} size={74} />
+        </View>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
-        <BouncePress
-          onPress={onCancel}
-          style={{
-            flex: 1,
-            backgroundColor: "#3D2E4A",
-            paddingVertical: 16,
-            borderRadius: 16,
-            alignItems: "center",
+      {/* Avatar Grid with Shuffle */}
+      <View style={styles.pickerWrap}>
+        <AvatarPicker
+          selected={avatar}
+          onSelect={setAvatar}
+          tileSize={56}
+          rightAction={
+            <TouchableOpacity
+              onPress={handleShuffleAvatar}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Randomize avatar"
+              style={styles.shuffleBtn}
+            >
+              <Ionicons name="shuffle" size={14} color={UI_COLORS.textPrimary} />
+            </TouchableOpacity>
+          }
+        />
+      </View>
+
+      {/* Child Details Inputs */}
+      <View style={styles.inputsStack}>
+        <AppInput
+          label={t("form.namePlaceholder")}
+          value={name}
+          onChangeText={(value) => {
+            setName(value);
+            if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
           }}
-        >
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "Bungee_400Regular" }}>{t("common:buttons.cancel")}</Text>
-        </BouncePress>
-        <BouncePress
-          onPress={handleSave}
-          style={{
-            flex: 2,
-            backgroundColor: "#10B981",
-            paddingVertical: 16,
-            borderRadius: 16,
-            alignItems: "center",
+          placeholder={t("form.namePlaceholder")}
+          error={errors.name}
+          leftIcon={
+            <Ionicons
+              name="person-outline"
+              size={18}
+              color={UI_COLORS.textMuted}
+            />
+          }
+          autoCapitalize="words"
+          returnKeyType="next"
+          onSubmitEditing={() => gradeInputRef.current?.focus()}
+          editable={!loading}
+          shellStyle={styles.inputShell}
+        />
+
+        <AppInput
+          ref={gradeInputRef}
+          label={t("form.gradePlaceholder")}
+          value={grade}
+          onChangeText={(value) => {
+            setGrade(value);
+            if (errors.grade) {
+              setErrors((prev) => ({ ...prev, grade: undefined }));
+            }
           }}
-        >
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "Bungee_400Regular" }}>{t("form.savePlayer")}</Text>
-        </BouncePress>
+          placeholder={t("form.gradePlaceholder")}
+          error={errors.grade}
+          leftIcon={
+            <Ionicons
+              name="school-outline"
+              size={18}
+              color={UI_COLORS.textMuted}
+            />
+          }
+          returnKeyType="done"
+          onSubmitEditing={handleSave}
+          editable={!loading}
+          shellStyle={styles.inputShell}
+        />
+      </View>
+
+      {/* Actions */}
+      <View style={styles.actionsRow}>
+        <View style={styles.cancelSlot}>
+          <PillButton
+            label={t("common:buttons.cancel")}
+            variant="secondary"
+            size="lg"
+            onPress={onCancel}
+            disabled={loading}
+          />
+        </View>
+        <View style={styles.saveSlot}>
+          <PillButton
+            label={t("form.savePlayer")}
+            variant="primary"
+            size="lg"
+            onPress={handleSave}
+            loading={loading}
+            icon={<Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+          />
+        </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    width: "100%",
+  },
+  previewWrap: {
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  previewRing: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderWidth: 1.5,
+    borderColor: "rgba(108, 92, 231, 0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  pickerWrap: {
+    marginBottom: 18,
+  },
+  shuffleBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: UI_COLORS.borderSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inputsStack: {
+    gap: 14,
+  },
+  inputShell: {
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 22,
+  },
+  cancelSlot: {
+    flex: 1,
+  },
+  saveSlot: {
+    flex: 1.4,
+  },
+});

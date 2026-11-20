@@ -1,7 +1,11 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { View, Text, Pressable } from "react-native";
-import Svg, { Path, G } from "react-native-svg";
+import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import i18n from "../../i18n";
+import { UI_COLORS, UI_RADII } from "../../constants/theme";
+import { getBodyFont, getHeadingFont } from "../../utils/fontForLocale";
+import { BrainMascot } from "./Mascots";
+import { PillButton } from "../ui";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -12,22 +16,36 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-function ErrorIllustration() {
-  return (
-    <View style={{ marginBottom: 20 }}>
-      <Svg width={80} height={80} viewBox="0 0 80 80" fill="none">
-        <G>
-          <Path d="M15 50c5-20 15-30 25-32s20 8 25 32" fill="#231C2B" stroke="#9B59B6" strokeWidth="2" />
-          <Path d="M32 55l6-10 6 10" stroke="#E85D75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <Path d="M48 52l4-6" stroke="#FFD93D" strokeWidth="2" strokeLinecap="round" />
-          <Path d="M20 55h40" stroke="#9B59B6" strokeWidth="2" strokeLinecap="round" />
-        </G>
-      </Svg>
-    </View>
-  );
+class MascotFallbackGuard extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <View style={styles.iconFallbackWell}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={36}
+            color={UI_COLORS.coral}
+          />
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -47,54 +65,57 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
+      const headingFont = getHeadingFont();
+      const bodyFont = getBodyFont();
+      const errorMessage = this.state.error?.message?.trim();
+
       return (
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "#0D0B14",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 32,
-          }}
-        >
-          <ErrorIllustration />
-          <Text
-            style={{
-              fontSize: 32,
-              fontFamily: "LuckiestGuy_400Regular",
-              color: "#FFFFFF",
-              marginBottom: 8,
-              textAlign: "center",
-            }}
-          >
-            {i18n.t("common:errors.somethingWentWrong")}
-          </Text>
-          <Text
-            style={{
-              fontSize: 16,
-              fontFamily: "Nunito_400Regular",
-              color: "#B8A9C9",
-              marginBottom: 24,
-              textAlign: "center",
-            }}
-          >
-            {i18n.t("common:errors.tryAgainLater")}
-          </Text>
-          <Pressable
-            onPress={this.handleRetry}
-            style={{
-              backgroundColor: "#9B59B6",
-              paddingHorizontal: 32,
-              paddingVertical: 16,
-              borderRadius: 16,
-            }}
-          >
-            <Text
-              style={{ color: "#FFFFFF", fontSize: 18, fontFamily: "Nunito_700Bold" }}
-            >
-              {i18n.t("common:buttons.tryAgain")}
-            </Text>
-          </Pressable>
+        <View style={styles.root}>
+          <View style={styles.outerShell}>
+            <View style={styles.innerCard}>
+              <View style={styles.mascotWrap}>
+                <MascotFallbackGuard>
+                  <BrainMascot
+                    size={88}
+                    state="error"
+                    showFloorShadow={false}
+                    interactive={false}
+                  />
+                </MascotFallbackGuard>
+              </View>
+
+              <Text style={[styles.title, { fontFamily: headingFont }]}>
+                {i18n.t("common:errors.somethingWentWrong", {
+                  defaultValue: "Something went wrong",
+                })}
+              </Text>
+
+              <Text style={[styles.subtitle, { fontFamily: bodyFont }]}>
+                {i18n.t("common:errors.tryAgainLater", {
+                  defaultValue: "Please try again later",
+                })}
+              </Text>
+
+              {__DEV__ && errorMessage ? (
+                <View style={styles.devErrorBox}>
+                  <Text style={styles.devErrorText} numberOfLines={3}>
+                    {errorMessage}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.ctaWrap}>
+                <PillButton
+                  label={i18n.t("common:buttons.tryAgain", {
+                    defaultValue: "Try Again",
+                  })}
+                  onPress={this.handleRetry}
+                  size="lg"
+                  icon={<Ionicons name="refresh" size={18} color="#FFFFFF" />}
+                />
+              </View>
+            </View>
+          </View>
         </View>
       );
     }
@@ -102,3 +123,84 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return this.props.children;
   }
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+  },
+  outerShell: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 30,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: UI_COLORS.borderSubtle,
+    padding: 6,
+  },
+  innerCard: {
+    width: "100%",
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderRadius: 25,
+    borderCurve: "continuous",
+    paddingHorizontal: 22,
+    paddingTop: 28,
+    paddingBottom: 22,
+    alignItems: "center",
+  },
+  mascotWrap: {
+    marginBottom: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconFallbackWell: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "rgba(232, 93, 117, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(232, 93, 117, 0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 25,
+    lineHeight: 31,
+    color: UI_COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14.5,
+    lineHeight: 21,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+    maxWidth: 280,
+    marginBottom: 22,
+  },
+  devErrorBox: {
+    width: "100%",
+    backgroundColor: "#120F1C",
+    borderRadius: UI_RADII.tile,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(232, 93, 117, 0.22)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  devErrorText: {
+    fontFamily: "Menlo",
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#F2A7B5",
+  },
+  ctaWrap: {
+    width: "100%",
+  },
+});

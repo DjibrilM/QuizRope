@@ -295,6 +295,58 @@ export default function GameScreen() {
     [currentMatch, isSoloMode, isSplitscreen, matchId, p1Name, p2Name, p1Id, p2Id, setGameEndResult, setCurrentQuestion],
   );
 
+  const persistAnswer = useCallback(
+    (
+      teamSide: "LEFT" | "RIGHT",
+      questionId: string | undefined,
+      answerIndex: number,
+      isCorrect: boolean,
+      responseTime: number,
+      round: number,
+      idSuffix: string,
+    ) => {
+      if (!matchId) return;
+      const playerId = isSoloMode
+        ? (p1Id as string) || "mock-player"
+        : isSplitscreen
+          ? teamSide === "LEFT"
+            ? (p1Id as string) || (p1Name as string) || "player-red"
+            : (p2Id as string) || (p2Name as string) || "player-blue"
+          : teamSide === "LEFT"
+            ? "player-red"
+            : "player-blue";
+
+      if (userRole === "guest") {
+        guestDb
+          .saveAnswer({
+            id: `${matchId}-${idSuffix}`,
+            matchId: matchId as string,
+            questionId: questionId || undefined,
+            playerId,
+            teamSide,
+            answerIndex,
+            isCorrect,
+            responseTime,
+            round,
+            createdAt: Date.now(),
+          })
+          .catch(() => { /* best-effort */ });
+      } else {
+        apiService
+          .submitAnswer(matchId as string, {
+            playerId,
+            teamSide,
+            answerIndex,
+            responseTime,
+            questionId,
+            isCorrect,
+          })
+          .catch(() => { /* best-effort */ });
+      }
+    },
+    [matchId, isSoloMode, isSplitscreen, p1Id, p2Id, p1Name, p2Name, userRole],
+  );
+
   const handleTimeout = useCallback(() => {
     const soloAnswered = isSoloMode && selectedAnswerLeft !== null;
     const splitAnswered = !isSoloMode && selectedAnswerLeft !== null && selectedAnswerRight !== null;
@@ -343,9 +395,27 @@ export default function GameScreen() {
 
     if (selectedAnswerLeft === null) {
       responseTimesRef.current.left.push(30000);
+      persistAnswer(
+        "LEFT",
+        currentQ.id,
+        -1,
+        false,
+        30000,
+        currentRound,
+        `timeout-L-${currentRound}`,
+      );
     }
     if (isSplitscreen && selectedAnswerRight === null) {
       responseTimesRef.current.right.push(30000);
+      persistAnswer(
+        "RIGHT",
+        currentQ.id,
+        -1,
+        false,
+        30000,
+        currentRound,
+        `timeout-R-${currentRound}`,
+      );
     }
 
     resetStreak();
@@ -356,7 +426,7 @@ export default function GameScreen() {
     setShowResult(true);
     setAllAnswered(true);
     endRound(currentRound + 1, teamScores.left, teamScores.right);
-  }, [isSoloMode, selectedAnswerLeft, selectedAnswerRight, currentRound, teamScores, resetStreak, setRoundResult, pushCorrection, endRound]);
+  }, [isSoloMode, isSplitscreen, selectedAnswerLeft, selectedAnswerRight, currentRound, teamScores, matchId, userRole, resetStreak, setRoundResult, pushCorrection, endRound, persistAnswer]);
 
   useEffect(() => { handleTimeoutRef.current = handleTimeout; }, [handleTimeout]);
 
@@ -385,45 +455,22 @@ export default function GameScreen() {
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       }
 
-      if (matchId) {
-        const playerId = isSoloMode
-          ? ((p1Id as string) || "mock-player")
-          : isSplitscreen
-            ? (teamSide === "LEFT"
-                ? ((p1Id as string) || (p1Name as string) || "player-red")
-                : ((p2Id as string) || (p2Name as string) || "player-blue"))
-            : teamSide === "LEFT" ? "player-red" : "player-blue";
-
-        if (userRole === "guest") {
-          guestDb.saveAnswer({
-            id: `${matchId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            matchId: matchId as string,
-            questionId: currentQ.id || undefined,
-            playerId,
-            teamSide,
-            answerIndex,
-            isCorrect,
-            responseTime: (30 - timeRemaining) * 1000,
-            round: currentRound,
-            createdAt: Date.now(),
-          }).catch(() => { /* best-effort */ });
-        } else {
-          apiService
-            .submitAnswer(matchId as string, {
-              playerId,
-              teamSide,
-              answerIndex,
-              responseTime: (30 - timeRemaining) * 1000,
-              questionId: currentQ.id,
-              isCorrect,
-            })
-            .catch(() => { /* best-effort */ });
-        }
-      }
-
       const sideKey = teamSide.toLowerCase() as "left" | "right";
-      const elapsedMs = Math.max(200, Math.min(30000, Date.now() - questionStartedAtRef.current));
+      const elapsedMs = Math.max(
+        200,
+        Math.min(30000, Date.now() - questionStartedAtRef.current),
+      );
       responseTimesRef.current[sideKey].push(elapsedMs);
+
+      persistAnswer(
+        teamSide,
+        currentQ.id,
+        answerIndex,
+        isCorrect,
+        elapsedMs,
+        currentRound,
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      );
 
       const shouldRecordLeftCorrection = isSoloMode || teamSide === "LEFT";
       const shouldRecordUnansweredRound =
@@ -519,7 +566,7 @@ export default function GameScreen() {
     [
       selectedAnswerLeft, selectedAnswerRight, timeRemaining, currentRound, currentMatch,
       matchId, teamScores, isSoloMode, isSplitscreen, p1Name, p2Name, p1Id, p2Id,
-      endRound, updateTeamScore, incrementStreak, resetStreak, setRoundResult, pushCorrection, setScorePopKey, streak,
+      endRound, updateTeamScore, incrementStreak, resetStreak, setRoundResult, pushCorrection, setScorePopKey, streak, persistAnswer,
     ],
   );
 

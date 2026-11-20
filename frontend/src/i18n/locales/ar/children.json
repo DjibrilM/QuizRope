@@ -5,8 +5,8 @@
   "chooseAvatar": "اختر أفاتار",
   "ageGrade": "العمر {{age}} - الصف {{grade}}",
   "ageGradeAccessibility": "{{name}}، العمر {{age}}، الصف {{grade}}",
-  "emptyTitle": "لا يوجد لاعبون بعد!",
-  "emptySubtitle": "أضف أول متسابق صغير لبدء المرح",
+  "emptyTitle": "لا يوجد أطفال بعد",
+  "emptySubtitle": "أضف طفلك الأول للبدء",
   "form": {
     "namePlaceholder": "اسم الطفل",
     "agePlaceholder": "العمر",
@@ -29,6 +29,36 @@
     "expired": "انتهت صلاحية الرمز",
     "ok": "حسناً",
     "errorTitle": "فشل في توليد الرمز",
-    "errorBody": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    "errorBody": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "connectedDevice": "تم ربط جهاز {{name}} الآن!",
+    "shareMessage": "استخدم الرمز {{code}} في QuizRope لربط جهاز {{name}}.",
+    "linkedStatus": "مرتبط",
+    "unlinkedStatus": "غير مرتبط",
+    "linkChildAccessibility": "إدارة ربط جهاز {{name}}",
+    "manageTitle": "ربط الجهاز",
+    "manageSubtitle": "تم ربط ملف {{name}} بجهاز. أنشئ رمزاً جديداً لربط جهاز آخر، أو افصل الربط لتسجيل الخروج دون حذف التقدم.",
+    "getNewCode": "الحصول على رمز جديد",
+    "unlinkDevice": "فصل الجهاز",
+    "unlinkConfirmTitle": "فصل جهاز {{name}}؟",
+    "unlinkConfirmBody": "سيتم تسجيل خروج الجهاز. سيبقى سجل الاختبارات والواجبات محفوظاً في حسابك.",
+    "unlinkConfirmCta": "فصل",
+    "unlinking": "جارٍ الفصل...",
+    "unlinkError": "تعذر فصل الجهاز. يرجى المحاولة مرة أخرى.",
+    "stepOne": "١. من حساب الضيف اضغط ربط بولي الأمر (أو أنا لاعب)",
+    "stepTwo": "٢. امسح رمز QR أو أدخل الرمز المكون من 6 أحرف",
+    "inviteGuestTitle": "دعوة ضيف جديد",
+    "inviteGuestDesc": "أنشئ رمزاً لمدة دقيقة لاستيراد اسم الطفل وتقدمه",
+    "familyInviteTitle": "دعوة إلى العائلة",
+    "autoRefreshing": "جارٍ إنشاء رمز جديد...",
+    "connectedGuest": "تم الانضمام إلى العائلة!"
+  },
+  "remove": {
+    "title": "إزالة الطفل؟",
+    "message": "هل أنت متأكد من إزالة {{name}}؟ لا يمكن التراجع عن هذا.",
+    "confirm": "إزالة",
+    "cancel": "إبقاء",
+    "removing": "جارٍ الإزالة...",
+    "biometricPrompt": "المصادقة لإزالة الملف",
+    "usePasscode": "استخدام رمز المرور"
   }
 }

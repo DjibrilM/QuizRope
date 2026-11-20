@@ -1,56 +1,140 @@
 import React from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import QRCodeStyled from "react-native-qrcode-styled";
 import { useTranslation } from "react-i18next";
+import { FONTS, UI_COLORS } from "../../constants/theme";
 
 interface QRCodeDisplayProps {
   sessionToken: string;
   status: "generating" | "ready" | "linked" | "waiting" | "expired";
+  linkedLabel?: string;
 }
 
-export function QRCodeDisplay({ sessionToken, status }: QRCodeDisplayProps) {
+export function QRCodeDisplay({
+  sessionToken,
+  status,
+  linkedLabel,
+}: QRCodeDisplayProps) {
   const { t } = useTranslation("common");
 
   return (
-    <View className="w-72 h-72 bg-white rounded-3xl items-center justify-center mb-8 overflow-hidden">
+    <View
+      style={[
+        styles.qrCard,
+        status === "linked" && styles.qrCardDarkState,
+      ]}
+    >
       {status === "generating" ? (
-        <View className="items-center">
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text className="text-slate-500 text-sm mt-3">{t("labels.generating")}</Text>
+        <View style={styles.stateBox}>
+          <ActivityIndicator size="large" color={UI_COLORS.primary} />
+          <Text style={styles.stateHint}>{t("labels.generating")}</Text>
         </View>
       ) : status === "expired" ? (
-        <View className="items-center px-6">
-          <Text className="text-red-500 text-lg font-bold">{t("labels.codeExpired")}</Text>
-          <Text className="text-slate-400 text-sm mt-2 text-center">
-            {t("labels.generateNewBelow")}
-          </Text>
+        <View style={styles.stateBox}>
+          <Text style={styles.expiredTitle}>{t("labels.codeExpired")}</Text>
+          <Text style={styles.stateHint}>{t("labels.generateNewBelow")}</Text>
+        </View>
+      ) : status === "linked" ? (
+        <View style={styles.stateBox}>
+          <View style={styles.linkedHalo}>
+            <Ionicons
+              name="checkmark-circle"
+              size={40}
+              color={UI_COLORS.mint}
+            />
+          </View>
+          <Text style={styles.linkedTitle}>{t("labels.linked")}</Text>
+          {linkedLabel ? (
+            <Text style={styles.linkedSubtitle}>{linkedLabel}</Text>
+          ) : null}
         </View>
       ) : (
-        <View className="items-center">
+        <View style={styles.qrInner}>
           <QRCodeStyled
             data={sessionToken}
-            style={{ backgroundColor: "white" }}
-            padding={16}
-            size={220}
-            pieceBorderRadius={3}
-            color="#1E1B4B"
+            style={{ backgroundColor: "#FFFFFF" }}
+            padding={22}
+            size={200}
+            pieceScale={1.03}
+            pieceBorderRadius="42%"
             isPiecesGlued
+            color="#161221"
             outerEyesOptions={{
-              borderRadius: 12,
-              color: "#7C3AED",
+              borderRadius: "28%",
+              color: "#161221",
             }}
             innerEyesOptions={{
-              borderRadius: 6,
-              color: "#8B5CF6",
+              borderRadius: "50%",
+              color: UI_COLORS.primary,
             }}
           />
-          {status === "linked" && (
-            <Text className="text-green-600 text-sm font-bold mt-2">
-              {t("labels.linked")}
-            </Text>
-          )}
         </View>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  qrCard: {
+    width: 244,
+    height: 244,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    borderCurve: "continuous",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginBottom: 18,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  qrCardDarkState: {
+    backgroundColor: UI_COLORS.surface,
+  },
+  qrInner: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stateBox: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  stateHint: {
+    fontFamily: FONTS.body,
+    fontSize: 13.5,
+    color: "#6B7280",
+    textAlign: "center",
+  },
+  expiredTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 17,
+    color: UI_COLORS.coral,
+  },
+  linkedHalo: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "rgba(52, 211, 153, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  linkedTitle: {
+    fontFamily: FONTS.bodyBlack,
+    fontSize: 20,
+    color: UI_COLORS.mint,
+    textAlign: "center",
+  },
+  linkedSubtitle: {
+    fontFamily: FONTS.body,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+  },
+});

@@ -3,6 +3,8 @@ export interface ParentUser {
   _id?: string;
   email: string;
   displayName: string;
+  avatarUrl?: string;
+  googlePhotoUrl?: string;
   firebaseUid?: string;
   children: string[];
   createdAt: Date;
@@ -14,6 +16,9 @@ export interface Child {
   displayName: string;
   avatarUrl: string;
   grade: string;
+  isLinked?: boolean;
+  linkedAt?: string | Date | null;
+  lastActiveAt?: string | Date;
 }
 
 export interface DeviceSession {

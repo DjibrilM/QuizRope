@@ -7,16 +7,19 @@
     "enterCodeInstead": "Ingresar código",
     "errorToken": "Error al obtener el token del niño. Toca abajo para reintentar.",
     "invalidCode": "Código inválido o expirado. Por favor intenta de nuevo.",
-    "connectAccount": "Conectar Cuenta"
+    "connectAccount": "Conectar Cuenta",
+    "linkingTo": "Vinculando con",
+    "scanInstruction": "Apunta tu cámara al código QR en el dispositivo de tu padre/madre.",
+    "joiningFamily": "Uniéndose a la familia"
   },
   "connectDevice": {
     "title": "Conectar dispositivo",
     "loadingTitle": "Configurando...",
-    "loadingMessage": "Obteniendo jugadores...",
+    "loadingMessage": "Cargando niños...",
     "selectChildTitle": "¿Quién juega?",
     "selectChildInstruction": "Selecciona un hijo para este dispositivo",
     "addNewChild": "+ Agregar nuevo hijo",
-    "newPlayerTitle": "Nuevo jugador",
+    "newPlayerTitle": "Nuevo niño",
     "linkingTitle": "Vinculando dispositivo...",
     "settingUpSession": "Configurando la sesión de {{name}}",
     "errorTitle": "Algo salió mal",

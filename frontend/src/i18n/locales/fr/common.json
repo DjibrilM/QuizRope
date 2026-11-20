@@ -11,7 +11,11 @@
     "tryAgain": "Réessayer",
     "close": "Fermer",
     "grantPermission": "Accorder la permission",
-    "link": "Associer"
+    "link": "Associer",
+    "copy": "Copier",
+    "copied": "Copié",
+    "paste": "Coller",
+    "share": "Partager"
   },
   "labels": {
     "or": "ou",
@@ -93,5 +97,17 @@
     "blue": "Bleu",
     "redTeam": "Équipe rouge",
     "blueTeam": "Équipe bleue"
+  },
+  "parentProfile": {
+    "title": "Profil Parent",
+    "badge": "Compte Parent",
+    "familyOverview": "Aperçu de la famille",
+    "kids": "Enfants",
+    "quizzes": "Quiz",
+    "homework": "Devoirs",
+    "manageKids": "Gérer les profils enfants",
+    "tapAvatarHint": "Appuyer pour changer d'avatar",
+    "useGooglePhoto": "Utiliser la photo Google",
+    "noKidsYet": "Aucun profil enfant ajouté"
   }
 }

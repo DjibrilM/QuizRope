@@ -557,6 +557,7 @@ export interface GuestProfileStats {
   correctAnswers: number;
   totalAnswers: number;
   accuracy: number;
+  avgResponseTime?: number;
   subjectStats: Array<{
     subject: string;
     correctAnswers: number;
@@ -572,6 +573,7 @@ export interface GuestProfileStats {
     correctAnswers: number;
     totalQuestions: number;
     accuracy: number;
+    avgResponseTime?: number;
     didWin: boolean;
   }>;
 }
@@ -585,15 +587,26 @@ export async function getGuestProfileStats(): Promise<GuestProfileStats> {
       db.getAllAsync<any>('SELECT * FROM guest_answers'),
     ]);
 
+    const completedMatchIds = new Set(completedMatches.map((m: any) => m.id));
+    const completedAnswers = allAnswers.filter((a: any) =>
+      completedMatchIds.has(a.match_id),
+    );
+
     const gamesPlayed = completedMatches.length;
-    const totalCorrect = allAnswers.filter((a: any) => a.is_correct === 1).length;
-    const totalAnswers = allAnswers.length;
+    const totalCorrect = completedAnswers.filter((a: any) => a.is_correct === 1).length;
+    const totalAnswers = completedAnswers.length;
+    const totalTime = completedAnswers.reduce(
+      (sum: number, a: any) => sum + Math.max(0, Number(a.response_time) || 0),
+      0,
+    );
+    const avgResponseTime =
+      totalAnswers > 0 ? Math.round(totalTime / totalAnswers) : 0;
     const accuracy = totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
 
     // Per-subject aggregation
     const subjectMap = new Map<string, { correct: number; total: number }>();
     for (const match of completedMatches) {
-      const matchAnswers = allAnswers.filter((a: any) => a.match_id === match.id);
+      const matchAnswers = completedAnswers.filter((a: any) => a.match_id === match.id);
       const existing = subjectMap.get(match.subject) ?? { correct: 0, total: 0 };
       existing.correct += matchAnswers.filter((a: any) => a.is_correct === 1).length;
       existing.total += matchAnswers.length;
@@ -608,10 +621,16 @@ export async function getGuestProfileStats(): Promise<GuestProfileStats> {
 
     // Recent matches (up to 5)
     const recentMatches = completedMatches.slice(0, 5).map((match: any) => {
-      const matchAnswers = allAnswers.filter((a: any) => a.match_id === match.id);
+      const matchAnswers = completedAnswers.filter((a: any) => a.match_id === match.id);
       const matchCorrect = matchAnswers.filter((a: any) => a.is_correct === 1).length;
       const matchTotal = matchAnswers.length;
+      const matchTime = matchAnswers.reduce(
+        (sum: number, a: any) => sum + Math.max(0, Number(a.response_time) || 0),
+        0,
+      );
       const matchAccuracy = matchTotal > 0 ? Math.round((matchCorrect / matchTotal) * 100) : 0;
+      const matchAvgResponseTime =
+        matchTotal > 0 && matchTime > 0 ? Math.round(matchTime / matchTotal) : 0;
       return {
         matchId: match.id,
         subject: match.subject,
@@ -621,12 +640,21 @@ export async function getGuestProfileStats(): Promise<GuestProfileStats> {
         correctAnswers: matchCorrect,
         totalQuestions: matchTotal,
         accuracy: matchAccuracy,
+        avgResponseTime: matchAvgResponseTime,
         didWin: match.winner != null,
       };
     });
 
     console.log(`${TAG} getGuestProfileStats OK gamesPlayed=${gamesPlayed} correct=${totalCorrect}`);
-    return { gamesPlayed, correctAnswers: totalCorrect, totalAnswers, accuracy, subjectStats, recentMatches };
+    return {
+      gamesPlayed,
+      correctAnswers: totalCorrect,
+      totalAnswers,
+      accuracy,
+      avgResponseTime,
+      subjectStats,
+      recentMatches,
+    };
   } catch (err) {
     console.error(`${TAG} getGuestProfileStats FAILED`, err);
     throw err;
@@ -729,7 +757,7 @@ export async function syncFromBackend(payload: {
           (id, subject, difficulty, game_mode, max_rounds, status, winner, rounds_played, score_left, score_right, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          m._id,
+          m._id || m.id,
           m.subject,
           m.difficulty,
           m.gameMode || 'solo',

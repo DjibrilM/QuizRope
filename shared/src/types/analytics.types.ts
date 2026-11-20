@@ -12,7 +12,9 @@ export interface ChildPerformance {
   displayName: string;
   totalMatches: number;
   totalQuestions: number;
+  totalCorrect?: number;
   overallAccuracy: number;
+  avgResponseTime?: number;
   subjectStats: SubjectStats[];
   bestSubject: string | null;
   weakestSubject: string | null;
@@ -26,6 +28,7 @@ export interface ChildMatchSummary {
   correctAnswers: number;
   totalQuestions: number;
   accuracy: number;
+  avgResponseTime?: number;
   winner: string;
   childTeamSide: string;
   didWin: boolean;

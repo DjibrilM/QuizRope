@@ -7,16 +7,19 @@
     "enterCodeInstead": "أدخل الرمز بدلاً من ذلك",
     "errorToken": "فشل الحصول على رمز الطفل. اضغط أدناه للمحاولة مرة أخرى.",
     "invalidCode": "الرمز غير صالح أو منتهي الصلاحية. حاول مرة أخرى.",
-    "connectAccount": "ربط الحساب"
+    "connectAccount": "ربط الحساب",
+    "linkingTo": "جارٍ الربط مع",
+    "scanInstruction": "وجّه الكاميرا نحو رمز QR على جهاز ولي أمرك.",
+    "joiningFamily": "انضمام إلى العائلة"
   },
   "connectDevice": {
     "title": "ربط الجهاز",
     "loadingTitle": "جارٍ الإعداد...",
-    "loadingMessage": "جارٍ جلب اللاعبين...",
+    "loadingMessage": "جارٍ جلب ملفات الأطفال...",
     "selectChildTitle": "من يلعب؟",
     "selectChildInstruction": "اختر طفلاً لهذا الجهاز",
     "addNewChild": "+ إضافة طفل جديد",
-    "newPlayerTitle": "لاعب جديد",
+    "newPlayerTitle": "طفل جديد",
     "linkingTitle": "جارٍ ربط الجهاز...",
     "settingUpSession": "جارٍ إعداد جلسة {{name}}",
     "errorTitle": "حدث خطأ ما",

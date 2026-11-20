@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Image } from "react-native";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
+import { isRemoteAvatarUrl } from "../../config/avatars";
 
 interface IconProps {
   size?: number;
@@ -49,21 +50,52 @@ function ChildIcon({ size = 32 }: IconProps) {
 }
 
 /**
- * Renders the circular 3D portrait avatar for a given avatar ID.
- * Falls back to the child SVG illustration if the ID is unknown.
+ * Renders the circular avatar for either a local bundled character portrait
+ * or a remote HTTPS profile URL (e.g., Google photo), falling back gracefully.
  */
 export function AvatarIcon({
   avatarId,
+  fallbackAvatarId = "owl",
   size = 32,
 }: {
   avatarId?: string;
+  fallbackAvatarId?: string;
   size?: number;
 }) {
-  const source = avatarId ? AVATAR_IMAGE_MAP[avatarId] : undefined;
-  if (source) {
+  const [remoteFailed, setRemoteFailed] = useState(false);
+
+  useEffect(() => {
+    setRemoteFailed(false);
+  }, [avatarId]);
+
+  const trimmed = avatarId?.trim();
+  const isRemote = isRemoteAvatarUrl(trimmed) && !remoteFailed;
+
+  if (isRemote && trimmed) {
     return (
       <Image
-        source={source}
+        source={{ uri: trimmed }}
+        resizeMode="cover"
+        fadeDuration={0}
+        onError={() => setRemoteFailed(true)}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: "#181326",
+        }}
+      />
+    );
+  }
+
+  const localSource =
+    (trimmed ? AVATAR_IMAGE_MAP[trimmed] : undefined) ??
+    (remoteFailed || trimmed ? AVATAR_IMAGE_MAP[fallbackAvatarId] : undefined);
+
+  if (localSource) {
+    return (
+      <Image
+        source={localSource}
         resizeMode="cover"
         fadeDuration={0}
         style={{
@@ -75,5 +107,6 @@ export function AvatarIcon({
       />
     );
   }
+
   return <ChildIcon size={size} />;
 }

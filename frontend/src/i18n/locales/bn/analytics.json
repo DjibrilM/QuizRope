@@ -11,7 +11,39 @@
     "avgTime": "গড় {{time}}সে",
     "viewHistory": "ম্যাচের ইতিহাস দেখুন",
     "noData": "কোনো ম্যাচ নেই",
-    "noDataSubtitle": "এখানে পরিসংখ্যান দেখতে কিছু গেম খেলুন!"
+    "noDataSubtitle": "এখানে পরিসংখ্যান দেখতে কিছু গেম খেলুন!",
+    "performanceBadge": {
+      "excellent": "চমৎকার",
+      "good": "ভালো অগ্রগতি",
+      "needsWork": "অনুশীলন প্রয়োজন"
+    },
+    "report": {
+      "title": "শেখার প্রতিবেদন",
+      "strongAt": "ভালো দক্ষতা",
+      "practiceNeeded": "আরও অনুশীলন প্রয়োজন",
+      "practiceHint": "সঠিকতা বাড়াতে {{subject}}-এ আরও সময় দিন",
+      "noWeakSubject": "চালিয়ে যান — বেশি অনুশীলনে আরও ভালো তথ্য মিলবে!",
+      "avgResponseTime": "গড় উত্তর সময়",
+      "avgResponseValue": "প্রতি প্রশ্নে {{time}} সে.",
+      "slowNote": "ভেবে উত্তর দিচ্ছে — ভালো অভ্যাস!",
+      "fastNote": "দ্রুত ও আত্মবিশ্বাসী উত্তর!",
+      "recentTrend": "সাম্প্রতিক প্রবণতা",
+      "trendImproving": "উন্নতি (+{{delta}}%)",
+      "trendDipping": "কমেছে (-{{delta}}%)",
+      "trendSteady": "স্থিতিশীল গতি",
+      "trendComparison": "সাম্প্রতিক ম্যাচ: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) বনাম আগে {{earlier}}%",
+      "rushedNote": "তাড়াহুড়ো করছে — ধীরে!",
+      "quickCheckNote": "দ্রুত — উত্তর যাচাই করুন",
+      "slowPracticeNote": "ভুল প্রশ্নগুলো দেখুন",
+      "practiceHintFast": "গড়ে {{time}} সেকেন্ডে {{total}}-এর মধ্যে {{missed}}টি ভুল — ধীরে পড়ে উত্তর দিন।",
+      "practiceHintSlow": "{{total}}-এর মধ্যে {{missed}}টি ভুল (গড় {{time}} সে.) — একসাথে {{subject}}-এর মূল বিষয়গুলো ঝালাই করুন।",
+      "practiceHintClose": "{{total}}-এর মধ্যে {{correct}}টি সঠিক — ৭৫%-এর খুব কাছাকাছি! ভুল উত্তরগুলো দেখুন।",
+      "practiceHintSupport": "{{total}}-এর মধ্যে {{missed}}টি ভুল — সহজ রাউন্ড চেষ্টা করুন বা ভুল প্রশ্নগুলো দেখুন।",
+      "missedBadge": "{{missed}}টি ভুল · {{accuracy}}%",
+      "allOnTrack": "সব বিষয়ে ৭০%+ — চমৎকার ধারাবাহিক অগ্রগতি!",
+      "needMoreMatches": "বিষয়ভিত্তিক প্রবণতা দেখতে আরও কিছু প্রশ্ন খেলুন।",
+      "difficultyTitle": "কঠিনতা অনুযায়ী"
+    }
   },
   "history": {
     "title": "ম্যাচের ইতিহাস",
@@ -19,7 +51,7 @@
     "lost": "হেরেছে",
     "accuracy": "{{accuracy}}% নির্ভুলতা",
     "noMatches": "কোনো ম্যাচ পাওয়া যায়নি",
-    "noMatchesSubtitle": "এই খেলোয়াড় এখনো কোনো ম্যাচ সম্পন্ন করেনি।"
+    "noMatchesSubtitle": "এই শিশু এখনো কোনো ম্যাচ সম্পন্ন করেনি।"
   },
   "review": {
     "title": "ম্যাচ পর্যালোচনা",

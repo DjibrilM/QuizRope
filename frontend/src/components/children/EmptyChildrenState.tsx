@@ -1,13 +1,13 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { EmptyState } from "../common/EmptyState";
+import { StateCard } from "../ui";
 
 export function EmptyChildrenState() {
   const { t } = useTranslation("children");
 
   return (
-    <EmptyState
-      illustration="noChildren"
+    <StateCard
+      icon="people-outline"
       title={t("emptyTitle")}
       subtitle={t("emptySubtitle")}
     />

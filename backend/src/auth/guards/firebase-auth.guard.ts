@@ -27,7 +27,12 @@ export class FirebaseAuthGuard implements CanActivate {
       if (decoded.role === 'parent') {
         const parent = await this.authService.getParentById(decoded.sub);
         if (!parent) return false;
-        request.user = { ...parent.toObject(), role: 'parent' };
+        request.user = {
+          ...parent.toObject(),
+          _id: parent._id,
+          id: parent._id.toString(),
+          role: 'parent',
+        };
         return true;
       } else if (decoded.role === 'child') {
         // Find child if childId is in token
@@ -39,8 +44,13 @@ export class FirebaseAuthGuard implements CanActivate {
             if (child.parentId?.toString() !== decoded.parentId) {
               return false;
             }
+            // Reject tokens revoked by parent device unlink
+            if ((decoded.tokenVersion ?? 0) !== (child.tokenVersion ?? 0)) {
+              return false;
+            }
             request.user = {
               _id: child._id,
+              id: child._id.toString(),
               parentId: decoded.parentId,
               role: 'child',
               displayName: child.displayName,

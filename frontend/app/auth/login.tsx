@@ -37,8 +37,11 @@ export default function LoginScreen() {
     return getHeadingFont();
   })();
 
-  const handleLogin = async (idToken: string) => {
-    const result = await apiService.login(idToken);
+  const handleLogin = async (
+    idToken: string,
+    profile?: { photoUrl?: string | null; displayName?: string | null },
+  ) => {
+    const result = await apiService.login(idToken, profile);
     apiService.setToken(result.token);
     const user = result.user as unknown as Record<string, unknown>;
     setAuth(
@@ -57,8 +60,11 @@ export default function LoginScreen() {
       if (!firebaseAuthService.isGoogleConfigured()) {
         throw new Error("Google Sign-In is not configured for this build.");
       }
-      const { idToken } = await firebaseAuthService.signInWithGoogle();
-      await handleLogin(idToken);
+      const { idToken, user } = await firebaseAuthService.signInWithGoogle();
+      await handleLogin(idToken, {
+        photoUrl: user?.photoURL,
+        displayName: user?.displayName,
+      });
     } catch (err: any) {
       showApiError(err);
     } finally {

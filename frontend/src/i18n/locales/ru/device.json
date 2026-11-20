@@ -7,16 +7,19 @@
     "enterCodeInstead": "Ввести код вместо этого",
     "errorToken": "Не удалось получить токен. Нажмите ниже, чтобы повторить.",
     "invalidCode": "Неверный или истёкший код. Попробуйте ещё раз.",
-    "connectAccount": "Подключить аккаунт"
+    "connectAccount": "Подключить аккаунт",
+    "linkingTo": "Привязка к",
+    "scanInstruction": "Наведите камеру на QR-код на устройстве родителя.",
+    "joiningFamily": "Вступление в семью"
   },
   "connectDevice": {
     "title": "Подключить устройство",
     "loadingTitle": "Настройка...",
-    "loadingMessage": "Получение игроков...",
+    "loadingMessage": "Загрузка профилей детей...",
     "selectChildTitle": "Кто играет?",
     "selectChildInstruction": "Выберите ребёнка для этого устройства",
     "addNewChild": "+ Добавить ребёнка",
-    "newPlayerTitle": "Новый игрок",
+    "newPlayerTitle": "Новый ребёнок",
     "linkingTitle": "Привязка устройства...",
     "settingUpSession": "Настройка сессии для {{name}}",
     "errorTitle": "Что-то пошло не так",

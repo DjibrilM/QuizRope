@@ -27,8 +27,10 @@ export interface LeaderboardEntry {
 export interface LinkInfo {
   displayName: string;
   avatarUrl: string;
+  grade?: string;
   parentId: string;
-  childId: string;
+  childId: string | null;
+  isFamilyInvite?: boolean;
 }
 
 type LogoutCallback = () => void;
@@ -157,10 +159,25 @@ class ApiService {
   // Auth
   async login(
     firebaseToken: string,
+    profile?: { photoUrl?: string | null; displayName?: string | null },
   ): Promise<{ token: string; user: ParentUser; mockMode?: boolean }> {
     return this.request("/auth/login", {
       method: "POST",
-      data: { token: firebaseToken },
+      data: {
+        token: firebaseToken,
+        ...(profile?.photoUrl ? { photoUrl: profile.photoUrl } : {}),
+        ...(profile?.displayName ? { displayName: profile.displayName } : {}),
+      },
+    });
+  }
+
+  async updateParentProfile(data: {
+    displayName?: string;
+    avatarUrl?: string;
+  }): Promise<ParentUser> {
+    return this.request("/auth/profile", {
+      method: "PATCH",
+      data: data as unknown as Record<string, unknown>,
     });
   }
 
@@ -199,6 +216,10 @@ class ApiService {
     return this.request(`/children/${id}`, { method: "DELETE" });
   }
 
+  async unlinkChild(id: string): Promise<{ success: boolean; child?: Child }> {
+    return this.request(`/children/${id}/unlink`, { method: "POST" });
+  }
+
   async createQRSession(): Promise<{ sessionToken: string; qrData: string }> {
     return this.request("/children/qr-session", { method: "POST" });
   }
@@ -229,12 +250,20 @@ class ApiService {
     });
   }
 
+  private normalizeMatch(match: any): Match {
+    if (!match || typeof match !== "object") return match;
+    const id = match._id || match.id || "";
+    return { ...match, _id: id, id };
+  }
+
   async getMatches(): Promise<Match[]> {
-    return this.request("/matches");
+    const data = await this.request<any[]>("/matches");
+    return Array.isArray(data) ? data.map((m) => this.normalizeMatch(m)) : [];
   }
 
   async getMatch(id: string): Promise<Match> {
-    return this.request(`/matches/${id}`);
+    const match = await this.request<any>(`/matches/${id}`);
+    return this.normalizeMatch(match);
   }
 
   async submitAnswer(
@@ -307,7 +336,9 @@ class ApiService {
     parentId?: string;
     childId?: string;
   }> {
-    return this.request(`/children/session/${token}/status`);
+    return this.request(
+      `/children/session/${encodeURIComponent(token.trim().toUpperCase())}/status`,
+    );
   }
 
   async authorizeChildSession(
@@ -316,7 +347,10 @@ class ApiService {
   ): Promise<{ success: boolean }> {
     return this.request("/children/session/authorize", {
       method: "POST",
-      data: { sessionToken, ...(childId && { childId }) },
+      data: {
+        sessionToken: sessionToken.trim().toUpperCase(),
+        ...(childId && { childId }),
+      },
     });
   }
 
@@ -374,14 +408,23 @@ class ApiService {
 
   // Guest mode
 
-  /** Parent generates a short code for a specific child to enter on their device. */
+  /** Parent generates a 1-minute code for an existing child or a general Family Hub guest invite. */
   async generateGuestLinkCode(
-    childId: string,
+    childId?: string,
   ): Promise<{ code: string; expiresAt: string }> {
     return this.request("/children/guest-link", {
       method: "POST",
-      data: { childId },
+      data: childId ? { childId } : {},
     });
+  }
+
+  /** Parent queries whether a generated link code has been redeemed or expired. */
+  async getGuestLinkStatus(
+    code: string,
+  ): Promise<{ used: boolean; expired: boolean; expiresAt: string | null }> {
+    return this.request(
+      `/children/guest-link/${encodeURIComponent(code.trim().toUpperCase())}/status`,
+    );
   }
 
   /**
@@ -390,16 +433,35 @@ class ApiService {
    */
   async redeemGuestCode(
     code: string,
-  ): Promise<{ token: string; parentId: string; childId: string }> {
+    guestInfo?: {
+      displayName?: string;
+      avatarUrl?: string;
+      grade?: string;
+    },
+  ): Promise<{
+    token: string;
+    parentId: string;
+    childId: string;
+    displayName?: string;
+    avatarUrl?: string;
+    grade?: string;
+  }> {
     return this.request("/auth/guest-token", {
       method: "POST",
-      data: { code },
+      data: {
+        code: code.trim().toUpperCase(),
+        ...(guestInfo?.displayName && { displayName: guestInfo.displayName }),
+        ...(guestInfo?.avatarUrl && { avatarUrl: guestInfo.avatarUrl }),
+        ...(guestInfo?.grade && { grade: guestInfo.grade }),
+      },
     });
   }
 
   /** Gets child profile info for a link code without redeeming it. */
   async getLinkInfo(code: string): Promise<LinkInfo> {
-    return this.request(`/auth/link-info/${code}`);
+    return this.request(
+      `/auth/link-info/${encodeURIComponent(code.trim().toUpperCase())}`,
+    );
   }
 
   // Homework Assist

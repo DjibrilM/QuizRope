@@ -256,11 +256,43 @@ export class MatchService {
       throw new NotFoundException('Question not found');
     }
 
+    const resolvedIndex = (match.questions as any[]).findIndex(
+      (q: any) => q._id?.toString() === currentQuestion._id?.toString(),
+    );
+    const roundIndex =
+      resolvedIndex >= 0 ? resolvedIndex : match.currentQuestionIndex;
+
+    const existingAnswer = await this.answerModel
+      .findOne({
+        matchId: match._id,
+        questionId: currentQuestion._id,
+        playerId,
+      })
+      .lean();
+    if (existingAnswer) {
+      return {
+        isCorrect: existingAnswer.isCorrect,
+        correctIndex: currentQuestion.correctIndex,
+        ropeMovement: 0,
+        newRopePosition: match.ropePosition,
+        teamScores: { left: match.teamScoreLeft, right: match.teamScoreRight },
+        gameOver: false,
+      };
+    }
+
     // Trust the client's isCorrect when provided — the frontend shuffles options
     // and has the correct shuffled correctIndex; the DB stores the original index.
-    const isCorrect = isCorrectOverride !== undefined
-      ? isCorrectOverride
-      : answerIndex === currentQuestion.correctIndex;
+    // A negative answerIndex (-1) represents a timeout / unanswered question.
+    const isCorrect =
+      answerIndex < 0
+        ? false
+        : isCorrectOverride !== undefined
+          ? isCorrectOverride
+          : answerIndex === currentQuestion.correctIndex;
+    const sanitizedResponseTime = Math.max(
+      0,
+      Number.isFinite(responseTime) ? responseTime : 0,
+    );
 
     // Rope physics (kept for backward compat)
     let ropeMovement = 0;
@@ -292,8 +324,8 @@ export class MatchService {
       teamSide,
       answerIndex,
       isCorrect,
-      responseTime,
-      round: match.currentQuestionIndex,
+      responseTime: sanitizedResponseTime,
+      round: roundIndex,
     });
     this.logger.debug(`submitAnswer saved: matchId=${match._id} playerId=${playerId} teamSide=${teamSide} isCorrect=${isCorrect}`);
 
@@ -357,8 +389,16 @@ export class MatchService {
       {
         $match: {
           matchId: { $in: matchIds },
-          // Exclude AI/mock players used in solo mode
-          playerId: { $nin: ['mock-player', 'ai-player', 'computer'] },
+          // Exclude AI/mock and anonymous local slot IDs
+          playerId: {
+            $nin: [
+              'mock-player',
+              'ai-player',
+              'computer',
+              'player-red',
+              'player-blue',
+            ],
+          },
         },
       },
       {
@@ -366,7 +406,7 @@ export class MatchService {
           _id: '$playerId',
           correctAnswers: { $sum: { $cond: ['$isCorrect', 1, 0] } },
           totalAnswers: { $sum: 1 },
-          totalTime: { $sum: '$responseTime' },
+          totalTime: { $sum: { $max: ['$responseTime', 0] } },
           matchIds: { $addToSet: '$matchId' },
         },
       },
@@ -463,7 +503,9 @@ export class MatchService {
         displayName: (child as any)?.displayName || '',
         totalMatches: 0,
         totalQuestions: 0,
+        totalCorrect: 0,
         overallAccuracy: 0,
+        avgResponseTime: 0,
         subjectStats: [],
         bestSubject: null,
         weakestSubject: null,
@@ -484,6 +526,7 @@ export class MatchService {
             _id: null,
             totalQuestions: { $sum: 1 },
             totalCorrect: { $sum: { $cond: ['$isCorrect', 1, 0] } },
+            totalTime: { $sum: { $max: ['$responseTime', 0] } },
           },
         },
       ]),
@@ -518,7 +561,7 @@ export class MatchService {
             _id: { $ifNull: ['$question.subject', '__unknown'] },
             totalQuestions: { $sum: 1 },
             correctAnswers: { $sum: { $cond: ['$isCorrect', 1, 0] } },
-            totalTime: { $sum: '$responseTime' },
+            totalTime: { $sum: { $max: ['$responseTime', 0] } },
             matchIds: { $addToSet: '$matchId' },
           },
         },
@@ -556,28 +599,48 @@ export class MatchService {
             matchesPlayed: { $size: '$matchIds' },
           },
         },
-        { $sort: { accuracy: -1 as const } },
+        {
+          $sort: {
+            accuracy: -1 as const,
+            totalQuestions: -1 as const,
+            avgResponseTime: 1 as const,
+          },
+        },
       ]),
     ]);
 
     // Use the direct counts — not the subject aggregate — for global totals
     const totalQuestions = rawTotals[0]?.totalQuestions ?? 0;
     const totalCorrect = rawTotals[0]?.totalCorrect ?? 0;
+    const totalTime = rawTotals[0]?.totalTime ?? 0;
 
     // Strip the __unknown bucket from the public list
     const validStats = subjectStats.filter((s) => s.subject !== '__unknown');
-    const best = validStats.length > 0 ? validStats[0] : null;
-    const weakest = validStats.length > 1 ? validStats[validStats.length - 1] : null;
+    const topSubject = validStats.length > 0 ? validStats[0] : null;
+    const bestSubject =
+      topSubject && topSubject.accuracy >= 50 ? topSubject.subject : null;
+    const lastSubject =
+      validStats.length > 1 ? validStats[validStats.length - 1] : null;
+    const weakestSubject =
+      lastSubject &&
+      topSubject &&
+      lastSubject.accuracy < topSubject.accuracy &&
+      lastSubject.accuracy < 75
+        ? lastSubject.subject
+        : null;
 
     return {
       childId,
       displayName: (child as any)?.displayName || '',
       totalMatches: childMatchIds.length,
       totalQuestions,
+      totalCorrect,
       overallAccuracy:
         totalQuestions > 0
           ? Math.round((totalCorrect / totalQuestions) * 100)
           : 0,
+      avgResponseTime:
+        totalQuestions > 0 ? Math.round(totalTime / totalQuestions) : 0,
       subjectStats: validStats.map((s) => ({
         subject: s.subject,
         totalQuestions: s.totalQuestions,
@@ -586,8 +649,8 @@ export class MatchService {
         avgResponseTime: s.avgResponseTime,
         matchesPlayed: s.matchesPlayed,
       })),
-      bestSubject: best?.subject || null,
-      weakestSubject: weakest?.subject || null,
+      bestSubject,
+      weakestSubject,
     };
   }
 
@@ -636,6 +699,7 @@ export class MatchService {
             _id: '$matchId',
             correctAnswers: { $sum: { $cond: ['$isCorrect', 1, 0] } },
             totalQuestions: { $sum: 1 },
+            totalTime: { $sum: { $max: ['$responseTime', 0] } },
             teamSide: { $first: '$teamSide' },
           },
         },
@@ -659,9 +723,14 @@ export class MatchService {
         const stats = statsMap.get(m._id.toString());
         const correctAnswers = stats?.correctAnswers ?? 0;
         const totalQuestions = stats?.totalQuestions ?? (m as any).maxRounds;
+        const totalTime = stats?.totalTime ?? 0;
         const accuracy =
           totalQuestions > 0
             ? Math.round((correctAnswers / totalQuestions) * 100)
+            : 0;
+        const avgResponseTime =
+          totalQuestions > 0 && totalTime > 0
+            ? Math.round(totalTime / totalQuestions)
             : 0;
         return {
           matchId: m._id.toString(),
@@ -672,6 +741,7 @@ export class MatchService {
           correctAnswers,
           totalQuestions,
           accuracy,
+          avgResponseTime,
           winner: (m as any).winner,
           childTeamSide: stats?.teamSide ?? null,
           didWin:

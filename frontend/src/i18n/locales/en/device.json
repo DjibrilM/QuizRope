@@ -7,16 +7,19 @@
     "enterCodeInstead": "Enter code instead",
     "errorToken": "Failed to get child token. Tap below to retry.",
     "invalidCode": "Invalid or expired code. Please try again.",
-    "connectAccount": "Connect Account"
+    "connectAccount": "Connect Account",
+    "linkingTo": "Linking to",
+    "scanInstruction": "Point your camera at the QR code on your parent’s device.",
+    "joiningFamily": "Joining Family"
   },
   "connectDevice": {
     "title": "Connect Device",
     "loadingTitle": "Setting Up...",
-    "loadingMessage": "Fetching players...",
+    "loadingMessage": "Fetching children...",
     "selectChildTitle": "Who's Playing?",
     "selectChildInstruction": "Select a child for this device",
     "addNewChild": "+ Add New Child",
-    "newPlayerTitle": "New Player",
+    "newPlayerTitle": "New Child",
     "linkingTitle": "Linking Device...",
     "settingUpSession": "Setting up {{name}}'s session",
     "errorTitle": "Something Went Wrong",

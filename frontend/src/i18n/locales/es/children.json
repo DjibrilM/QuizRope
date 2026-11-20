@@ -5,8 +5,8 @@
   "chooseAvatar": "Elegir avatar",
   "ageGrade": "Edad {{age}} - Grado {{grade}}",
   "ageGradeAccessibility": "{{name}}, edad {{age}}, grado {{grade}}",
-  "emptyTitle": "¡Aún no hay jugadores!",
-  "emptySubtitle": "Agrega a tu primer pequeño quizzer para empezar la diversión",
+  "emptyTitle": "Aún no hay niños",
+  "emptySubtitle": "Agrega a tu primer hijo para comenzar",
   "form": {
     "namePlaceholder": "Nombre del niño",
     "agePlaceholder": "Edad",
@@ -29,6 +29,36 @@
     "expired": "Código expirado",
     "ok": "Entendido",
     "errorTitle": "Error al generar el código",
-    "errorBody": "Algo salió mal. Por favor, inténtalo de nuevo."
+    "errorBody": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "connectedDevice": "¡El dispositivo de {{name}} ya está vinculado!",
+    "shareMessage": "Usa el código {{code}} en QuizRope para vincular el dispositivo de {{name}}.",
+    "linkedStatus": "Vinculado",
+    "unlinkedStatus": "Sin vincular",
+    "linkChildAccessibility": "Administrar vínculo de dispositivo de {{name}}",
+    "manageTitle": "Vínculo de dispositivo",
+    "manageSubtitle": "{{name}} está vinculado a un dispositivo. Genera un nuevo código para conectar otro, o desvincúlalo sin borrar su progreso.",
+    "getNewCode": "Obtener nuevo código",
+    "unlinkDevice": "Desvincular dispositivo",
+    "unlinkConfirmTitle": "¿Desvincular el dispositivo de {{name}}?",
+    "unlinkConfirmBody": "Se cerrará la sesión en su dispositivo. Su historial y tareas seguirán guardados en tu cuenta.",
+    "unlinkConfirmCta": "Desvincular",
+    "unlinking": "Desvinculando...",
+    "unlinkError": "No se pudo desvincular el dispositivo. Inténtalo de nuevo.",
+    "stepOne": "1. Desde invitado, toca Vincular con padre (o Soy Jugador)",
+    "stepTwo": "2. Escanea este código QR o escribe el código de 6 caracteres",
+    "inviteGuestTitle": "Invitar a un invitado",
+    "inviteGuestDesc": "Crea un código de 1 minuto para importar su perfil y progreso",
+    "familyInviteTitle": "Invitación Familiar",
+    "autoRefreshing": "Generando un código nuevo...",
+    "connectedGuest": "¡Se unió a tu Family Hub!"
+  },
+  "remove": {
+    "title": "¿Eliminar niño?",
+    "message": "¿Seguro que deseas eliminar a {{name}}? Esta acción no se puede deshacer.",
+    "confirm": "Eliminar",
+    "cancel": "Conservar",
+    "removing": "Eliminando...",
+    "biometricPrompt": "Autentícate para eliminar el perfil",
+    "usePasscode": "Usar código"
   }
 }

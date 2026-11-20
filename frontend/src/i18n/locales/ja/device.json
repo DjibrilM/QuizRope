@@ -7,16 +7,19 @@
     "enterCodeInstead": "コードを入力する",
     "errorToken": "トークンの取得に失敗しました。下をタップして再試行してください。",
     "invalidCode": "無効または期限切れのコードです。もう一度お試しください。",
-    "connectAccount": "アカウントを接続"
+    "connectAccount": "アカウントを接続",
+    "linkingTo": "リンク先",
+    "scanInstruction": "保護者のデバイスのQRコードにカメラを向けてください。",
+    "joiningFamily": "ファミリーに参加"
   },
   "connectDevice": {
     "title": "デバイスを接続",
     "loadingTitle": "設定中...",
-    "loadingMessage": "プレイヤーを取得中...",
+    "loadingMessage": "子どもの情報を取得中...",
     "selectChildTitle": "誰がプレイする？",
     "selectChildInstruction": "このデバイスのお子様を選択してください",
     "addNewChild": "+ 新しいお子様を追加",
-    "newPlayerTitle": "新しいプレイヤー",
+    "newPlayerTitle": "新しい子ども",
     "linkingTitle": "デバイスをリンク中...",
     "settingUpSession": "{{name}}のセッションを設定中",
     "errorTitle": "問題が発生しました",

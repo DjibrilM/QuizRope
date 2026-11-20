@@ -7,16 +7,19 @@
     "enterCodeInstead": "কোড লিখুন",
     "errorToken": "চাইল্ড টোকেন পেতে ব্যর্থ। পুনরায় চেষ্টা করতে নিচে ট্যাপ করুন।",
     "invalidCode": "অবৈধ বা মেয়াদোত্তীর্ণ কোড। অনুগ্রহ করে আবার চেষ্টা করুন।",
-    "connectAccount": "অ্যাকাউন্ট সংযুক্ত করুন"
+    "connectAccount": "অ্যাকাউন্ট সংযুক্ত করুন",
+    "linkingTo": "লিঙ্ক করা হচ্ছে",
+    "scanInstruction": "আপনার অভিভাবকের ডিভাইসের QR কোডের দিকে ক্যামেরা ধরুন।",
+    "joiningFamily": "পরিবারে যোগ দিচ্ছেন"
   },
   "connectDevice": {
     "title": "ডিভাইস সংযুক্ত করুন",
     "loadingTitle": "সেট আপ হচ্ছে...",
-    "loadingMessage": "খেলোয়াড়দের তথ্য আনা হচ্ছে...",
+    "loadingMessage": "শিশুদের তথ্য আনা হচ্ছে...",
     "selectChildTitle": "কে খেলছে?",
     "selectChildInstruction": "এই ডিভাইসের জন্য একটি সন্তান নির্বাচন করুন",
     "addNewChild": "+ নতুন সন্তান যোগ করুন",
-    "newPlayerTitle": "নতুন খেলোয়াড়",
+    "newPlayerTitle": "নতুন শিশু",
     "linkingTitle": "ডিভাইস সংযুক্ত হচ্ছে...",
     "settingUpSession": "{{name}}-এর সেশন সেট আপ হচ্ছে",
     "errorTitle": "কিছু একটা ভুল হয়েছে",

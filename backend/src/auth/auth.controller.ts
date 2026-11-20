@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   Req,
@@ -14,7 +15,6 @@ import { FirebaseAuthGuard } from './guards/firebase-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { DeviceSession } from '../children/schemas/device-session.schema';
-import { GuestLink } from '../children/schemas/guest-link.schema';
 import { ChildrenService } from '../children/children.service';
 
 @Controller("auth")
@@ -23,13 +23,14 @@ export class AuthController {
     private readonly authService: AuthService,
     @InjectModel('DeviceSession')
     private readonly sessionModel: Model<DeviceSession>,
-    @InjectModel('GuestLink')
-    private readonly guestLinkModel: Model<GuestLink>,
     private readonly childrenService: ChildrenService,
   ) {}
 
   @Post("login")
-  async login(@Body() body: { token: string }) {
+  async login(
+    @Body()
+    body: { token: string; photoUrl?: string; displayName?: string },
+  ) {
     const decoded = await this.authService.validateFirebaseToken(
       body.token || "",
     );
@@ -40,8 +41,9 @@ export class AuthController {
 
     const parent = await this.authService.findOrCreateParent({
       email: decoded.email,
-      displayName: decoded.name || decoded.email,
+      displayName: decoded.name || body.displayName || decoded.email,
       firebaseUid: decoded.uid,
+      photoUrl: decoded.picture || body.photoUrl,
     });
 
     const token = this.authService.signToken({
@@ -79,8 +81,9 @@ export class AuthController {
 
   @Post("child-token")
   async getChildToken(@Body() body: { sessionToken: string }) {
+    const cleanToken = (body.sessionToken || "").trim().toUpperCase();
     const session = await this.sessionModel.findOne({
-      sessionToken: body.sessionToken,
+      sessionToken: cleanToken,
       isActive: true,
       expiresAt: { $gt: new Date() },
     });
@@ -90,59 +93,80 @@ export class AuthController {
     }
 
     const childId = session.childId?.toString() || null;
+    const child = childId
+      ? await this.childrenService.markChildLinked(childId)
+      : null;
 
     const token = this.authService.signToken({
-      sub: body.sessionToken,
+      sub: cleanToken,
       role: "child",
       parentId: session.parentId.toString(),
-      ...(childId && { childId }),
+      ...(childId && { childId, tokenVersion: child?.tokenVersion ?? 0 }),
     });
 
-    return { token, parentId: session.parentId.toString(), childId };
+    return {
+      token,
+      parentId: session.parentId.toString(),
+      childId,
+      ...(child && {
+        displayName: child.displayName,
+        avatarUrl: child.avatarUrl,
+        grade: child.grade,
+      }),
+    };
   }
 
   /**
    * Guest kid enters a code the parent generated → receives a child JWT.
    * No authentication required — the code is the credential.
+   * For Family Hub invitations (without a pre-selected childId), passes the
+   * guest's displayName and avatarUrl to create their child profile cleanly.
    */
   @Post("guest-token")
-  async getGuestToken(@Body() body: { code: string }) {
+  async getGuestToken(
+    @Body()
+    body: {
+      code: string;
+      displayName?: string;
+      avatarUrl?: string;
+      grade?: string;
+    },
+  ) {
     if (!body.code) {
       throw new BadRequestException("code is required");
     }
 
-    const link = await this.guestLinkModel.findOneAndUpdate(
+    const resolved = await this.childrenService.validateAndConsumeGuestCode(
+      body.code,
       {
-        code: body.code.toUpperCase(),
-        used: false,
-        expiresAt: { $gt: new Date() },
+        displayName: body.displayName,
+        avatarUrl: body.avatarUrl,
+        grade: body.grade,
       },
-      { used: true },
-      { new: true },
     );
 
-    if (!link) {
+    if (!resolved) {
       throw new BadRequestException("Invalid or expired link code");
     }
 
-    const parentId = link.parentId.toString();
-    const childId = link.childId.toString();
+    const { parentId, childId, displayName, avatarUrl, grade, tokenVersion } =
+      resolved;
 
     const token = this.authService.signToken({
       sub: childId,
       role: "child",
       parentId,
       childId,
+      tokenVersion,
     });
-
-    const child = await this.childrenService.getChildById(childId);
 
     return {
       token,
       parentId,
       childId,
-      displayName: child?.displayName ?? "",
-      avatarUrl: child?.avatarUrl ?? "",
+      displayName,
+      avatarUrl,
+      grade,
     };
   }
 
@@ -164,7 +188,30 @@ export class AuthController {
   @Get("me")
   @UseGuards(FirebaseAuthGuard)
   async getMe(@Req() req) {
+    if (req.user?.role === "parent") {
+      const parentId = req.user.id || req.user._id?.toString();
+      if (parentId) {
+        const refreshed = await this.authService.ensureParentAvatar(parentId);
+        if (refreshed) return refreshed;
+      }
+    }
     return req.user;
+  }
+
+  @Patch("profile")
+  @UseGuards(FirebaseAuthGuard)
+  async updateProfile(
+    @Req() req,
+    @Body() body: { displayName?: string; avatarUrl?: string },
+  ) {
+    if (req.user?.role !== "parent") {
+      throw new UnauthorizedException("Only parents can update parent profile");
+    }
+    const parentId = req.user.id || req.user._id?.toString();
+    if (!parentId) {
+      throw new UnauthorizedException("Invalid parent session");
+    }
+    return this.authService.updateParentProfile(parentId, body || {});
   }
 
   @Get("status")

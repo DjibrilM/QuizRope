@@ -17,6 +17,33 @@ const JWT_SECRET =
   process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production';
 const JWT_EXPIRES_IN = '7d';
 
+/** Gender-neutral non-human creature/cosmic avatars used when a parent has no Gmail photo. */
+const PARENT_FALLBACK_AVATAR_IDS = [
+  'lion',
+  'fox',
+  'panda',
+  'unicorn',
+  'dragon',
+  'owl',
+  'dolphin',
+  'rocket',
+  'star',
+  'dino',
+  'cat',
+  'dog',
+] as const;
+
+function sanitizeHttpPhotoUrl(url?: string | null): string {
+  const trimmed = (url || '').trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+}
+
+function pickRandomParentAvatarId(): string {
+  return PARENT_FALLBACK_AVATAR_IDS[
+    Math.floor(Math.random() * PARENT_FALLBACK_AVATAR_IDS.length)
+  ];
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -40,6 +67,7 @@ export class AuthService {
     parentId?: string;
     childId?: string;
     guestId?: string;
+    tokenVersion?: number;
   }): string {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   }
@@ -68,6 +96,7 @@ export class AuthService {
     email: string;
     displayName: string;
     firebaseUid?: string;
+    photoUrl?: string;
   }): Promise<Parent> {
     let parent = await this.parentModel.findOne({
       $or: [
@@ -78,16 +107,125 @@ export class AuthService {
       ],
     });
 
+    const sanitizedPhoto = sanitizeHttpPhotoUrl(userData.photoUrl);
+
     if (!parent) {
       parent = await this.parentModel.create({
         email: userData.email,
         displayName: userData.displayName,
         firebaseUid: userData.firebaseUid || '',
+        googlePhotoUrl: sanitizedPhoto,
+        avatarUrl: sanitizedPhoto || pickRandomParentAvatarId(),
       });
       this.logger.log(`Created new parent: ${parent.email}`);
+      return parent;
+    }
+
+    let needsSave = false;
+    if (userData.firebaseUid && !parent.firebaseUid) {
+      parent.firebaseUid = userData.firebaseUid;
+      needsSave = true;
+    }
+    if (sanitizedPhoto && parent.googlePhotoUrl !== sanitizedPhoto) {
+      const prevGoogle = parent.googlePhotoUrl;
+      parent.googlePhotoUrl = sanitizedPhoto;
+      if (
+        !parent.avatarUrl ||
+        parent.avatarUrl === prevGoogle ||
+        /^https?:\/\//i.test(parent.avatarUrl)
+      ) {
+        parent.avatarUrl = sanitizedPhoto;
+      }
+      needsSave = true;
+    }
+    if (!parent.avatarUrl) {
+      parent.avatarUrl =
+        sanitizedPhoto || parent.googlePhotoUrl || pickRandomParentAvatarId();
+      needsSave = true;
+    }
+
+    if (needsSave) {
+      await parent.save();
     }
 
     return parent;
+  }
+
+  /** Ensures existing parent records have a Gmail photo or random non-human avatar. */
+  async ensureParentAvatar(parentId: string): Promise<any> {
+    const parent = await this.parentModel.findById(parentId);
+    if (!parent) return null;
+
+    if (parent.avatarUrl && (parent.googlePhotoUrl || !parent.firebaseUid)) {
+      return { ...parent.toObject(), role: 'parent' };
+    }
+
+    let googlePhoto = sanitizeHttpPhotoUrl(parent.googlePhotoUrl);
+    if (!googlePhoto && isFirebaseConfigured && parent.firebaseUid) {
+      try {
+        const admin = require('firebase-admin');
+        const fbUser = await admin.auth().getUser(parent.firebaseUid);
+        googlePhoto = sanitizeHttpPhotoUrl(fbUser?.photoURL);
+      } catch {
+        // Non-critical: fall back to random avatar if Firebase lookup fails
+      }
+    }
+
+    let changed = false;
+    if (googlePhoto && parent.googlePhotoUrl !== googlePhoto) {
+      parent.googlePhotoUrl = googlePhoto;
+      changed = true;
+    }
+    if (!parent.avatarUrl) {
+      parent.avatarUrl = googlePhoto || pickRandomParentAvatarId();
+      changed = true;
+    }
+
+    if (changed) {
+      await parent.save();
+    }
+    return { ...parent.toObject(), role: 'parent' };
+  }
+
+  /** Allows a parent to switch between non-human avatars or their Google profile photo. */
+  async updateParentProfile(
+    parentId: string,
+    updates: { displayName?: string; avatarUrl?: string },
+  ): Promise<any> {
+    const parent = await this.parentModel.findById(parentId);
+    if (!parent) {
+      throw new UnauthorizedException('Parent account not found');
+    }
+
+    if (updates.displayName !== undefined) {
+      const trimmed = updates.displayName.trim();
+      if (trimmed.length < 2 || trimmed.length > 40) {
+        throw new BadRequestException(
+          'Display name must be between 2 and 40 characters',
+        );
+      }
+      parent.displayName = trimmed;
+    }
+
+    if (updates.avatarUrl !== undefined) {
+      const nextAvatar = updates.avatarUrl.trim();
+      const isKnownCreature =
+        (PARENT_FALLBACK_AVATAR_IDS as readonly string[]).includes(
+          nextAvatar,
+        ) || /^parent_\d{2}$/.test(nextAvatar);
+      const isOwnGooglePhoto =
+        !!nextAvatar &&
+        !!parent.googlePhotoUrl &&
+        nextAvatar === parent.googlePhotoUrl;
+
+      if (!isKnownCreature && !isOwnGooglePhoto) {
+        throw new BadRequestException('Invalid avatar selection');
+      }
+      parent.avatarUrl = nextAvatar;
+    }
+
+    await parent.save();
+    return { ...parent.toObject(), role: 'parent' };
   }
 
   async getParentById(id: string): Promise<Parent | null> {

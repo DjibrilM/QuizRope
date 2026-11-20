@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Platform,
   ScrollView,
@@ -10,15 +10,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MatchStatus } from "@shared/types/match.types";
 import { usePortrait } from "../src/hooks/useOrientation";
 import { useGameStore } from "../src/stores/gameStore";
-import { firebaseAuthService } from "../src/services/firebase";
-import * as guestDb from "../src/services/guestDb";
 import { apiService } from "../src/services/api";
 import { hapticsService } from "../src/services/haptics";
+import { getFallbackParentAvatarId } from "../src/config/avatars";
 import { AvatarIcon } from "../src/components/common/AvatarIcons";
 import {
   HomeChildrenIcon,
@@ -35,10 +33,7 @@ import {
 } from "../src/components/common";
 import { BrainMascot } from "../src/components/common/Mascots";
 import {
-  FloatingBottomSheet,
-  FloatingBottomSheetView,
   LanguagePill,
-  PillButton,
   type FloatingBottomSheetRef,
 } from "../src/components/ui";
 import { FONTS, UI_COLORS, UI_RADII } from "../src/constants/theme";
@@ -161,7 +156,6 @@ function HomeActionPill({
 
 export default function HomeScreen() {
   usePortrait();
-  const queryClient = useQueryClient();
   const { t } = useTranslation(["home", "auth", "common"]);
   const {
     parentUser,
@@ -169,7 +163,6 @@ export default function HomeScreen() {
     userRole,
     guestProfile,
     childProfile,
-    logout,
     setCurrentMatch,
     setChildren,
     children,
@@ -178,7 +171,6 @@ export default function HomeScreen() {
 
   const isGuest = userRole === "guest";
   const isChild = userRole === "child";
-  const logoutSheetRef = useRef<FloatingBottomSheetRef>(null);
   const languageSheetRef = useRef<FloatingBottomSheetRef>(null);
 
   const headingFont = (() => {
@@ -207,14 +199,14 @@ export default function HomeScreen() {
     }
   }, [userRole, setChildren]);
 
-  const handleOpenLogout = useCallback(() => {
-    hapticsService.selection();
-    logoutSheetRef.current?.present();
-  }, []);
-
-  const handleCloseLogout = useCallback(() => {
-    logoutSheetRef.current?.dismiss();
-  }, []);
+  const parentFallbackAvatar = getFallbackParentAvatarId(
+    parentUser?.email || parentUser?.id || "parent",
+  );
+  const activeAvatar = isGuest
+    ? guestProfile?.avatarId
+    : isChild
+      ? childProfile?.avatarUrl
+      : parentUser?.avatarUrl || parentFallbackAvatar;
 
   const handleQuickPlay = () => {
     const match = {
@@ -249,20 +241,6 @@ export default function HomeScreen() {
     router.push({ pathname: "/match/game", params: { matchId: match.id } });
   };
 
-  const handleLogout = async () => {
-    handleCloseLogout();
-    try {
-      await firebaseAuthService.signOut();
-    } catch (err) {
-      console.warn("Firebase sign-out error (non-critical):", err);
-    }
-    guestDb.clearAllGuestData().catch(() => {});
-    apiService.clearToken();
-    logout();
-    queryClient.clear();
-    router.replace("/");
-  };
-
   const activeName = isGuest
     ? guestProfile?.displayName
     : isChild
@@ -275,54 +253,33 @@ export default function HomeScreen() {
     ? `${t("home:welcomeBack")}, ${firstName}`
     : t("home:welcomeBack");
 
-  const renderRightAccessory = (inLiquidGlass: boolean) => {
-    if (isGuest || isChild) {
-      return (
-        <TouchableOpacity
-          onPress={() => {
-            hapticsService.selection();
-            router.push("/profile" as any);
-          }}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={t("common:profile", "Profile")}
-          style={[
-            styles.avatarHeaderButton,
-            inLiquidGlass && styles.avatarHeaderButtonBare,
-          ]}
-        >
-          <AvatarIcon
-            avatarId={
-              isGuest ? guestProfile?.avatarId : childProfile?.avatarUrl
-            }
-            size={28}
-          />
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        onPress={handleOpenLogout}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel={t("auth:logout.button")}
-        style={[
-          styles.logoutHeaderButton,
-          inLiquidGlass && styles.logoutHeaderButtonBare,
-        ]}
-      >
-        <Ionicons
-          name="log-out-outline"
-          size={17}
-          color={UI_COLORS.textSecondary}
-        />
-        {!inLiquidGlass ? (
-          <Text style={styles.logoutHeaderText}>{t("auth:logout.button")}</Text>
-        ) : null}
-      </TouchableOpacity>
-    );
-  };
+  const renderRightAccessory = (inLiquidGlass: boolean) => (
+    <TouchableOpacity
+      onPress={() => {
+        hapticsService.selection();
+        router.push(
+          (isChild || isGuest ? "/kid-profile" : "/parent-profile") as any,
+        );
+      }}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={
+        isChild || isGuest
+          ? t("leaderboard:yourProfile", "Your Profile")
+          : t("common:parentProfile.title")
+      }
+      style={[
+        styles.avatarHeaderButton,
+        inLiquidGlass && styles.avatarHeaderButtonBare,
+      ]}
+    >
+      <AvatarIcon
+        avatarId={activeAvatar}
+        fallbackAvatarId={parentFallbackAvatar}
+        size={28}
+      />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -476,42 +433,6 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Sign Out Confirmation Bottom Sheet */}
-      <FloatingBottomSheet ref={logoutSheetRef} enableDynamicSizing>
-        <FloatingBottomSheetView style={styles.sheetContent}>
-          <View style={styles.sheetIconBall}>
-            <Ionicons
-              name="log-out-outline"
-              size={26}
-              color={UI_COLORS.coral}
-            />
-          </View>
-          <Text style={[styles.sheetTitle, { fontFamily: headingFont }]}>
-            {t("auth:logout.title")}
-          </Text>
-          <Text style={styles.sheetBody}>{t("auth:logout.confirmation")}</Text>
-
-          <View style={styles.sheetActions}>
-            <View style={styles.sheetActionSlot}>
-              <PillButton
-                label={t("common:buttons.cancel")}
-                variant="secondary"
-                size="lg"
-                onPress={handleCloseLogout}
-              />
-            </View>
-            <View style={styles.sheetActionSlot}>
-              <PillButton
-                label={t("auth:logout.button")}
-                size="lg"
-                onPress={handleLogout}
-                style={styles.logoutConfirmButton}
-              />
-            </View>
-          </View>
-        </FloatingBottomSheetView>
-      </FloatingBottomSheet>
-
       <LanguageSelector ref={languageSheetRef} />
     </SafeAreaView>
   );
@@ -566,28 +487,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "transparent",
     borderWidth: 0,
-  },
-  logoutHeaderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    height: 34,
-    paddingHorizontal: 12,
-    borderRadius: UI_RADII.pill,
-    backgroundColor: "#1A1520",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.07)",
-  },
-  logoutHeaderButtonBare: {
-    height: 28,
-    paddingHorizontal: 6,
-    backgroundColor: "transparent",
-    borderWidth: 0,
-  },
-  logoutHeaderText: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 12,
-    color: UI_COLORS.textSecondary,
   },
   scroll: {
     flex: 1,
@@ -709,46 +608,5 @@ const styles = StyleSheet.create({
   },
   chevronWellHighlight: {
     backgroundColor: "rgba(255, 255, 255, 0.16)",
-  },
-  sheetContent: {
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-  sheetIconBall: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "rgba(232, 93, 117, 0.14)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  sheetTitle: {
-    fontSize: 22,
-    lineHeight: 28,
-    color: UI_COLORS.textPrimary,
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  sheetBody: {
-    fontFamily: FONTS.body,
-    fontSize: 14,
-    lineHeight: 20,
-    color: UI_COLORS.textSecondary,
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  sheetActions: {
-    flexDirection: "row",
-    width: "100%",
-    gap: 10,
-  },
-  sheetActionSlot: {
-    flex: 1,
-  },
-  logoutConfirmButton: {
-    backgroundColor: UI_COLORS.coral,
   },
 });

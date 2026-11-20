@@ -176,8 +176,14 @@ export class MatchController {
     if (!VALID_TEAM_SIDES.includes(body.teamSide)) {
       throw new BadRequestException('teamSide must be LEFT or RIGHT');
     }
-    if (typeof body.answerIndex !== 'number' || body.answerIndex < 0) {
-      throw new BadRequestException('answerIndex must be a non-negative number');
+    if (
+      typeof body.answerIndex !== 'number' ||
+      body.answerIndex < -1 ||
+      body.answerIndex > 3
+    ) {
+      throw new BadRequestException(
+        'answerIndex must be between -1 and 3',
+      );
     }
     return this.matchService.submitAnswer(
       id,

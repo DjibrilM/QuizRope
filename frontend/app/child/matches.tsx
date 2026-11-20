@@ -1,213 +1,201 @@
-import { View, Text, ScrollView } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import type { ChildMatchSummary } from "@shared/types/analytics.types";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { apiService } from "../../src/services/api";
-import { AnimatedLoader, EmptyState, StaggeredList, BouncePress, ScreenHeader } from "../../src/components/common";
+import { AnimatedLoader, ScreenHeader } from "../../src/components/common";
+import {
+  ChildMatchSummaryCard,
+  HistoryListShell,
+} from "../../src/components/match";
+import { StateCard } from "../../src/components/ui";
 import { getSubjectTheme } from "../../src/config/subjectThemes";
-import { FONTS, FORTNITE_COLORS } from "../../src/constants/theme";
-import type { ChildMatchSummary } from "@shared/types/analytics.types";
-
-function MatchCard({
-  match,
-  onPress,
-  t,
-}: {
-  match: ChildMatchSummary;
-  onPress: () => void;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}) {
-  const theme = getSubjectTheme(match.subject);
-  const isSolo = match.gameMode === "solo";
-  const isSplitscreen = match.gameMode === "splitscreen";
-  const date = new Date(match.date);
-  const dateStr = date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const modeLabel = isSolo ? "SOLO" : isSplitscreen ? "SPLIT" : "ONLINE";
-  const modeColor = isSolo ? "#A78BFA" : isSplitscreen ? "#F59E0B" : "#3B82F6";
-  const accuracyColor =
-    match.accuracy >= 70 ? "#10B981" : match.accuracy >= 40 ? "#F59E0B" : "#EF4444";
-
-  return (
-    <BouncePress onPress={onPress}>
-      <View
-        style={{
-          backgroundColor: FORTNITE_COLORS.bgCard,
-          borderRadius: 16,
-          padding: 16,
-          gap: 12,
-          marginBottom: 12,
-          borderWidth: 1,
-          borderColor: "#2D2440",
-        }}
-      >
-        {/* Top row: badges + date */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1, flexWrap: "wrap" }}>
-            {/* Subject */}
-            <View
-              style={{
-                backgroundColor: theme.accentColor + "20",
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ fontSize: 12, fontFamily: FONTS.bodySemiBold, color: theme.accentColor }}>
-                {theme.label}
-              </Text>
-            </View>
-            {/* Mode */}
-            <View
-              style={{
-                backgroundColor: modeColor + "20",
-                borderRadius: 8,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontFamily: FONTS.bodySemiBold, color: modeColor }}>
-                {modeLabel}
-              </Text>
-            </View>
-            {/* Won/Lost — only for non-solo */}
-            {!isSolo && (
-              <View
-                style={{
-                  backgroundColor: match.didWin ? "#10B98120" : "#EF444420",
-                  borderRadius: 8,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontFamily: FONTS.bodySemiBold,
-                    color: match.didWin ? "#10B981" : "#EF4444",
-                  }}
-                >
-                  {match.didWin ? t("analytics:history.won") : t("analytics:history.lost")}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={{ fontSize: 11, fontFamily: FONTS.body, color: FORTNITE_COLORS.textMuted, marginLeft: 8 }}>
-            {dateStr}
-          </Text>
-        </View>
-
-        {/* Score + accuracy bar */}
-        <View style={{ gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 15, fontFamily: FONTS.bodyBold, color: FORTNITE_COLORS.textPrimary }}>
-              {match.correctAnswers}
-              <Text style={{ fontSize: 13, fontFamily: FONTS.body, color: FORTNITE_COLORS.textSecondary }}>
-                /{match.totalQuestions} correct
-              </Text>
-            </Text>
-            <Text style={{ fontSize: 15, fontFamily: FONTS.accent, color: accuracyColor }}>
-              {match.accuracy}%
-            </Text>
-          </View>
-          <View style={{ height: 6, backgroundColor: "#3D2E4A", borderRadius: 3, overflow: "hidden" }}>
-            <View
-              style={{
-                height: "100%",
-                width: `${match.accuracy}%` as any,
-                backgroundColor: accuracyColor,
-                borderRadius: 3,
-              }}
-            />
-          </View>
-        </View>
-
-        {/* Bottom: difficulty + tap hint */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 11, fontFamily: FONTS.body, color: FORTNITE_COLORS.textMuted, textTransform: "capitalize" }}>
-            {match.difficulty.charAt(0) + match.difficulty.slice(1).toLowerCase()} difficulty
-          </Text>
-          <Text style={{ fontSize: 11, fontFamily: FONTS.body, color: "#4A3D5A" }}>
-            Tap to review →
-          </Text>
-        </View>
-      </View>
-    </BouncePress>
-  );
-}
+import { hapticsService } from "../../src/services/haptics";
 
 export default function ChildMatchesScreen() {
   usePortrait();
-  const { t } = useTranslation(["analytics", "common"]);
-  const { childId, childName } = useLocalSearchParams();
-  const { data: matches = [], isLoading, isError, error, refetch } = useQuery({
+  const { t } = useTranslation(["analytics", "homework", "common"]);
+  const { childId } = useLocalSearchParams<{ childId?: string }>();
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const {
+    data: matches = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<ChildMatchSummary[]>({
     queryKey: ["childMatches", childId],
     queryFn: () => apiService.getChildMatchHistory(childId as string),
     enabled: !!childId,
     staleTime: 0,
   });
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  const subjects = useMemo(() => {
+    const seen = new Set<string>();
+    for (const m of matches) {
+      if (m.subject) seen.add(m.subject.toUpperCase());
+    }
+    return Array.from(seen);
+  }, [matches]);
+
+  const activeSubject =
+    selectedSubject && subjects.includes(selectedSubject)
+      ? selectedSubject
+      : null;
+
+  const filteredMatches = useMemo(() => {
+    if (!activeSubject) return matches;
+    return matches.filter(
+      (m) => m.subject?.toUpperCase() === activeSubject,
+    );
+  }, [matches, activeSubject]);
+
   const errorMessage = error instanceof Error ? error.message : "";
 
   return (
-    <SafeAreaView edges={["bottom"]} style={{ flex: 1, backgroundColor: FORTNITE_COLORS.bgDark }}>
+    <SafeAreaView edges={["bottom"]} className="flex-1 bg-game-bg">
       <ScreenHeader title={t("analytics:history.title")} />
 
       <ScrollView
-        style={{ flex: 1 }}
+        className="flex-1"
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#A78BFA"
+          />
+        }
       >
-        {isLoading && (
-          <View style={{ alignItems: "center", paddingTop: 80 }}>
-            <AnimatedLoader size="lg" />
-          </View>
-        )}
+        <View className="w-full max-w-[480px] self-center px-4 pt-3 pb-10">
+          {!isLoading && !isError && subjects.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-4 -mx-1"
+            >
+              <View className="flex-row gap-2 px-1">
+                <TouchableOpacity
+                  onPress={() => {
+                    hapticsService.selection();
+                    setSelectedSubject(null);
+                  }}
+                  activeOpacity={0.8}
+                  className={`rounded-full px-4 py-2 ${
+                    activeSubject === null
+                      ? "bg-[#6C5CE7]"
+                      : "bg-[#161221] border border-white/[0.06]"
+                  }`}
+                >
+                  <Text
+                    className={`font-body-bold text-xs ${
+                      activeSubject === null ? "text-white" : "text-[#9CA3AF]"
+                    }`}
+                  >
+                    {t("homework:filters.all")}
+                  </Text>
+                </TouchableOpacity>
 
-        {isError && !isLoading && (
-          <EmptyState
-            illustration="error"
-            title={t("common:errors.somethingWentWrong")}
-            subtitle={errorMessage}
-            action={{ label: t("common:buttons.tryAgain"), onPress: refetch }}
-          />
-        )}
+                {subjects.map((subjectKey) => {
+                  const isActive = activeSubject === subjectKey;
+                  const label = t(`common:subjects.${subjectKey}`, {
+                    defaultValue: getSubjectTheme(subjectKey).label,
+                  });
+                  return (
+                    <TouchableOpacity
+                      key={subjectKey}
+                      onPress={() => {
+                        hapticsService.selection();
+                        setSelectedSubject(subjectKey);
+                      }}
+                      activeOpacity={0.8}
+                      className={`rounded-full px-4 py-2 ${
+                        isActive
+                          ? "bg-[#6C5CE7]"
+                          : "bg-[#161221] border border-white/[0.06]"
+                      }`}
+                    >
+                      <Text
+                        className={`font-body-bold text-xs ${
+                          isActive ? "text-white" : "text-[#9CA3AF]"
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          ) : null}
 
-        {!isLoading && !isError && matches.length === 0 && (
-          <EmptyState
-            illustration="noMatches"
-            title={t("analytics:history.noMatches")}
-            subtitle={t("analytics:history.noMatchesSubtitle")}
-          />
-        )}
+          {isLoading ? (
+            <View className="items-center pt-20">
+              <AnimatedLoader size="lg" />
+            </View>
+          ) : null}
 
-        {!isLoading && !isError && matches.length > 0 && (
-          <StaggeredList staggerMs={60}>
-            {matches.map((match) => (
-              <MatchCard
-                key={match.matchId}
-                match={match}
-                t={t}
-                onPress={() =>
-                  router.push({
-                    pathname: "/match/review" as any,
-                    params: {
-                      matchId: match.matchId,
-                      childId: childId as string,
-                      subject: match.subject,
-                    },
-                  })
-                }
-              />
-            ))}
-          </StaggeredList>
-        )}
+          {!isLoading && isError ? (
+            <StateCard
+              icon="alert-circle-outline"
+              tone="error"
+              title={t("common:errors.somethingWentWrong")}
+              subtitle={errorMessage || undefined}
+              actionLabel={t("common:buttons.tryAgain")}
+              onAction={() => {
+                void refetch();
+              }}
+            />
+          ) : null}
+
+          {!isLoading && !isError && matches.length === 0 ? (
+            <StateCard
+              icon="game-controller-outline"
+              title={t("analytics:history.noMatches")}
+              subtitle={t("analytics:history.noMatchesSubtitle")}
+            />
+          ) : null}
+
+          {!isLoading && !isError && filteredMatches.length > 0 ? (
+            <HistoryListShell>
+              {filteredMatches.map((match) => (
+                <ChildMatchSummaryCard
+                  key={match.matchId}
+                  summary={match}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/match/review" as any,
+                      params: {
+                        matchId: match.matchId,
+                        childId: childId as string,
+                        subject: match.subject,
+                      },
+                    });
+                  }}
+                />
+              ))}
+            </HistoryListShell>
+          ) : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

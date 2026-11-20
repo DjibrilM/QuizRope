@@ -11,7 +11,11 @@
     "tryAgain": "Tentar Novamente",
     "close": "Fechar",
     "grantPermission": "Conceder Permissao",
-    "link": "Vincular"
+    "link": "Vincular",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "paste": "Colar",
+    "share": "Compartilhar"
   },
   "labels": {
     "or": "ou",
@@ -93,5 +97,17 @@
     "blue": "Azul",
     "redTeam": "Time Vermelho",
     "blueTeam": "Time Azul"
+  },
+  "parentProfile": {
+    "title": "Perfil do Responsável",
+    "badge": "Conta de Responsável",
+    "familyOverview": "Resumo da Família",
+    "kids": "Filhos",
+    "quizzes": "Quizzes",
+    "homework": "Lições",
+    "manageKids": "Gerenciar perfis dos filhos",
+    "tapAvatarHint": "Toque para trocar o avatar",
+    "useGooglePhoto": "Usar foto do Google",
+    "noKidsYet": "Nenhum perfil infantil adicionado ainda"
   }
 }
