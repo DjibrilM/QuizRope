@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "একক - {{subject}}",
+    "setupTitle": "চ্যালেঞ্জ ঠিক করুন",
+    "setupSubtitle": "কঠিনতা, রাউন্ড এবং ঐচ্ছিক ফোকাস বেছে নিন",
     "startButton": "খেলা শুরু করুন",
     "contextLabel": "আপনার অনুশীলন কাস্টমাইজ করুন",
     "contextPlaceholder": "যেমন. বর্গমূল, ২০ পর্যন্ত হর সহ ভগ্নাংশ...",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "স্প্লিট স্ক্রিন · {{subject}}",
+    "setupTitle": "যুদ্ধ সেটআপ",
     "subtitle": "দুই খেলোয়াড় · একই ডিভাইস",
     "ageGroupLabel": "বয়স গোষ্ঠী",
     "playersLabel": "খেলোয়াড়",

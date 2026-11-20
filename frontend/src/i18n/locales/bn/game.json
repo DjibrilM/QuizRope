@@ -31,7 +31,42 @@
     "playAgain": "আবার খেলুন",
     "backToHome": "হোমে ফিরে যান",
     "wellDone": "সাবাশ!",
-    "finalScore": "চূড়ান্ত স্কোর: {{score}}"
+    "keepPracticing": "অনুশীলন চালিয়ে যাও!",
+    "finalScore": "চূড়ান্ত স্কোর: {{score}}",
+    "reviewAnswers": "উত্তর পর্যালোচনা"
+  },
+  "buddy": {
+    "streak3": "দারুণ! পরপর ৩টি সঠিক!",
+    "streak5": "অপ্রতিরোধ্য!",
+    "fast": "বিদ্যুৎ গতি!",
+    "timeout": "সময় শেষ! পরের প্রশ্নে মন দাও!",
+    "streakLost": "ধারাবাহিকতা ভেঙেছে — হাল ছেড়ো না!",
+    "wrong1": "কাছাকাছি ছিল — পরেরটি পারবে!",
+    "wrongStreak": "ধীরে প্রতিটি উত্তর ভালো করে পড়ো!",
+    "recovery": "দারুণ ফিরে আসা!"
+  },
+  "correction": {
+    "title": "পূর্ণ পর্যালোচনা",
+    "question": "প্রশ্ন {{number}}",
+    "summary": "{{correct}} / {{total}} সঠিক",
+    "questionsCount": "{{count}} টি প্রশ্ন",
+    "missed": "ভুল",
+    "questionMap": "প্রশ্ন মানচিত্র",
+    "avgSpeed": "গড় {{time}}সে",
+    "filterAll": "সব",
+    "filterMissed": "ভুল",
+    "filterCorrect": "সঠিক",
+    "statusCorrect": "সঠিক",
+    "statusWrong": "ভুল",
+    "statusSkipped": "সময় শেষ",
+    "perfectFilterTitle": "নিখুঁত!",
+    "perfectFilterSubtitle": "সব প্রশ্নই সঠিক হয়েছে — দেখার মতো কোনো ভুল নেই।",
+    "noCorrectFilterSubtitle": "এই রাউন্ডে কোনো সঠিক উত্তর নেই।",
+    "showAll": "সব প্রশ্ন দেখান",
+    "explanation": "ব্যাখ্যা",
+    "skipped": "সময় শেষ — কোনো উত্তর দেওয়া হয়নি",
+    "empty": "পর্যালোচনার জন্য কোনো উত্তর নেই",
+    "done": "সম্পন্ন"
   },
   "scoreboard": {
     "score": "স্কোর"

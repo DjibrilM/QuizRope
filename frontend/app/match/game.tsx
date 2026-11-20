@@ -11,6 +11,10 @@ import * as guestDb from "../../src/services/guestDb";
 import { SplitscreenLayout } from "../../src/components/game/SplitscreenLayout";
 import { SoloMultiplayerLayout } from "../../src/components/game/SoloMultiplayerLayout";
 import type {
+  OrbExpressionName,
+  OrbState,
+} from "../../src/components/common/Mascots";
+import type {
   StoreQuestion,
   StoreRoundResult,
   CorrectionItem,
@@ -61,6 +65,12 @@ export default function GameScreen() {
 
   const questionsRef = useRef<StoreQuestion[]>(FALLBACK_QUESTIONS);
   const correctCountRef = useRef({ left: 0, right: 0 });
+  const responseTimesRef = useRef<{ left: number[]; right: number[] }>({
+    left: [],
+    right: [],
+  });
+  const wrongStreakRef = useRef(0);
+  const questionStartedAtRef = useRef(Date.now());
 
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedAnswerLeft, setSelectedAnswerLeft] = useState<number | null>(null);
@@ -70,8 +80,26 @@ export default function GameScreen() {
   const [allAnswered, setAllAnswered] = useState(false);
   const [scorePopKey, setScorePopKey] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
 
+  const [wrongStreak, setWrongStreak] = useState(0);
+  const [mascotReaction, setMascotReaction] = useState<"none" | "correct" | "wrong">("none");
   const [buddyVisible, setBuddyVisible] = useState(false);
+  const [buddyTriggerKey, setBuddyTriggerKey] = useState(0);
   const [buddyMessage, setBuddyMessage] = useState("");
+  const [buddyState, setBuddyState] = useState<OrbState>("done");
+
+  const showMascotFeedback = useCallback(
+    (msg: string, state: OrbState) => {
+      setBuddyState(state);
+      setBuddyMessage(msg);
+      setBuddyVisible(true);
+      setBuddyTriggerKey((k) => k + 1);
+    },
+    [],
+  );
+
+  const handleHideBuddy = useCallback(() => {
+    setBuddyVisible(false);
+  }, []);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,6 +112,7 @@ export default function GameScreen() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    questionStartedAtRef.current = Date.now();
     const duration = 30;
     let t = duration;
     setTimeRemaining(duration);
@@ -200,6 +229,10 @@ export default function GameScreen() {
         }
 
         const totalRounds = nextRound - 1;
+        const averageMs = (samples: number[]) =>
+          samples.length > 0
+            ? Math.round(samples.reduce((sum, v) => sum + v, 0) / samples.length)
+            : 0;
         if (isSoloMode) {
           setGameEndResult({
             matchId: matchId as string,
@@ -211,7 +244,7 @@ export default function GameScreen() {
               displayName: "You",
               correctAnswers: correctCountRef.current.left,
               totalAnswers: totalRounds,
-              avgResponseTime: Math.round(Math.random() * 5000 + 2000),
+              avgResponseTime: averageMs(responseTimesRef.current.left),
             }],
           });
         } else {
@@ -229,20 +262,21 @@ export default function GameScreen() {
                 displayName: isSplitscreen ? p1 : "Red Player",
                 correctAnswers: correctCountRef.current.left,
                 totalAnswers: totalRounds,
-                avgResponseTime: Math.round(Math.random() * 5000 + 2000),
+                avgResponseTime: averageMs(responseTimesRef.current.left),
               },
               {
                 playerId: isSplitscreen ? p2 : "player-blue-1",
                 displayName: isSplitscreen ? p2 : "Blue Player",
                 correctAnswers: correctCountRef.current.right,
                 totalAnswers: totalRounds,
-                avgResponseTime: Math.round(Math.random() * 5000 + 2000),
+                avgResponseTime: averageMs(responseTimesRef.current.right),
               },
             ],
           });
         }
       } else {
         if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
+        const transitionDelay = wrongStreakRef.current > 0 ? 850 : 650;
         resultTimeoutRef.current = setTimeout(
           () => {
             setCurrentRound(nextRound);
@@ -251,9 +285,10 @@ export default function GameScreen() {
             setSelectedAnswerRight(null);
             setAllAnswered(false);
             setShowResult(false);
+            setMascotReaction("none");
             startTimerRef.current?.();
           },
-          400,
+          transitionDelay,
         );
       }
     },
@@ -267,18 +302,23 @@ export default function GameScreen() {
 
     const currentQ = questionsRef.current[(currentRound - 1) % questionsRef.current.length];
 
-    pushCorrection({
-      questionText: currentQ.text,
-      options: currentQ.options,
-      correctIndex: currentQ.correctIndex,
-      explanation: currentQ.explanation || "",
-      userAnswerIndex: -1,
-      isCorrect: false,
-    } as CorrectionItem);
+    pushCorrection(
+      {
+        questionText: currentQ.text,
+        options: currentQ.options,
+        correctIndex: currentQ.correctIndex,
+        explanation: currentQ.explanation || "",
+        userAnswerIndex: -1,
+        isCorrect: false,
+        round: currentRound,
+        responseTime: 30000,
+      } as CorrectionItem,
+      (matchId as string) || null,
+    );
 
     if (userRole === "guest" && matchId) {
       guestDb.saveCorrection({
-        id: `${matchId}-corr-${currentRound}-timeout`,
+        id: `${matchId}-corr-${currentRound}`,
         matchId: matchId as string,
         round: currentRound,
         questionText: currentQ.text,
@@ -290,9 +330,22 @@ export default function GameScreen() {
       }).catch(() => {});
     }
 
-    if (Math.random() > 0.5) {
-      setBuddyMessage(t("game:buddy.timeout", "Too slow! Let's get the next one! ⏰"));
-      setBuddyVisible(true);
+    const nextWrong = wrongStreakRef.current + 1;
+    wrongStreakRef.current = nextWrong;
+    setWrongStreak(nextWrong);
+    setMascotReaction("wrong");
+    showMascotFeedback(
+      nextWrong >= 2
+        ? t("game:buddy.wrongStreak")
+        : t("game:buddy.timeout"),
+      "error",
+    );
+
+    if (selectedAnswerLeft === null) {
+      responseTimesRef.current.left.push(30000);
+    }
+    if (isSplitscreen && selectedAnswerRight === null) {
+      responseTimesRef.current.right.push(30000);
     }
 
     resetStreak();
@@ -368,31 +421,54 @@ export default function GameScreen() {
         }
       }
 
-      pushCorrection({
-        questionText: currentQ.text,
-        options: currentQ.options,
-        correctIndex: currentQ.correctIndex,
-        explanation: currentQ.explanation || "",
-        userAnswerIndex: answerIndex,
-        isCorrect,
-      } as CorrectionItem);
+      const sideKey = teamSide.toLowerCase() as "left" | "right";
+      const elapsedMs = Math.max(200, Math.min(30000, Date.now() - questionStartedAtRef.current));
+      responseTimesRef.current[sideKey].push(elapsedMs);
 
-      if (userRole === "guest" && matchId) {
-        guestDb.saveCorrection({
-          id: `${matchId}-corr-${currentRound}`,
-          matchId: matchId as string,
-          round: currentRound,
-          questionText: currentQ.text,
-          options: currentQ.options,
-          correctIndex: currentQ.correctIndex,
-          explanation: currentQ.explanation || "",
-          userAnswerIndex: answerIndex,
-          isCorrect,
-        }).catch(() => {});
+      const shouldRecordLeftCorrection = isSoloMode || teamSide === "LEFT";
+      const shouldRecordUnansweredRound =
+        isSplitscreen && shouldEndRound && teamSide === "RIGHT" && selectedAnswerLeft === null;
+
+      if (shouldRecordLeftCorrection || shouldRecordUnansweredRound) {
+        const recordedAnswerIndex = shouldRecordLeftCorrection ? answerIndex : -1;
+        const recordedCorrect = shouldRecordLeftCorrection ? isCorrect : false;
+
+        pushCorrection(
+          {
+            questionText: currentQ.text,
+            options: currentQ.options,
+            correctIndex: currentQ.correctIndex,
+            explanation: currentQ.explanation || "",
+            userAnswerIndex: recordedAnswerIndex,
+            isCorrect: recordedCorrect,
+            round: currentRound,
+            responseTime: shouldRecordLeftCorrection ? elapsedMs : undefined,
+          } as CorrectionItem,
+          (matchId as string) || null,
+        );
+
+        if (userRole === "guest" && matchId) {
+          guestDb.saveCorrection({
+            id: `${matchId}-corr-${currentRound}`,
+            matchId: matchId as string,
+            round: currentRound,
+            questionText: currentQ.text,
+            options: currentQ.options,
+            correctIndex: currentQ.correctIndex,
+            explanation: currentQ.explanation || "",
+            userAnswerIndex: recordedAnswerIndex,
+            isCorrect: recordedCorrect,
+          }).catch(() => {});
+        }
       }
 
       if (isCorrect) {
-        const side = teamSide.toLowerCase() as "left" | "right";
+        const side = sideKey;
+        const prevWrong = wrongStreakRef.current;
+        wrongStreakRef.current = 0;
+        setWrongStreak(0);
+        setMascotReaction("correct");
+
         correctCountRef.current[side] += 1;
         updateTeamScore(side, 10);
         incrementStreak();
@@ -401,21 +477,29 @@ export default function GameScreen() {
         setScorePopKey((prev) => ({ ...prev, [side]: prev[side] + 1 }));
 
         const currentStreak = streak + 1;
-        if (currentStreak === 3) {
-          setBuddyMessage(t("game:buddy.streak3", "On fire! 3 in a row! 🔥"));
-          setBuddyVisible(true);
+        if (prevWrong >= 2) {
+          showMascotFeedback(t("game:buddy.recovery"), "done");
+        } else if (currentStreak === 3) {
+          showMascotFeedback(t("game:buddy.streak3"), "done");
         } else if (currentStreak === 5) {
-          setBuddyMessage(t("game:buddy.streak5", "Unstoppable! 🚀"));
-          setBuddyVisible(true);
-        } else if (timeRemaining > 25 && Math.random() > 0.3) {
-          setBuddyMessage(t("game:buddy.fast", "Lightning fast! ⚡️"));
-          setBuddyVisible(true);
+          showMascotFeedback(t("game:buddy.streak5"), "done");
+        } else if (timeRemaining > 25 && Math.random() > 0.35) {
+          showMascotFeedback(t("game:buddy.fast"), "done");
         }
       } else {
+        const nextWrong = wrongStreakRef.current + 1;
+        wrongStreakRef.current = nextWrong;
+        setWrongStreak(nextWrong);
+        setMascotReaction("wrong");
+
         if (streak > 2) {
-          setBuddyMessage(t("game:buddy.streakLost", "Oh no, streak lost! Rebuild it! 💪"));
-          setBuddyVisible(true);
+          showMascotFeedback(t("game:buddy.streakLost"), "error");
+        } else if (nextWrong >= 2) {
+          showMascotFeedback(t("game:buddy.wrongStreak"), "error");
+        } else {
+          showMascotFeedback(t("game:buddy.wrong1"), "error");
         }
+
         resetStreak();
         soundService.play("wrong");
         hapticsService.error();
@@ -465,6 +549,11 @@ export default function GameScreen() {
   const handlePlayAgain = () => {
     if (resultTimeoutRef.current) { clearTimeout(resultTimeoutRef.current); resultTimeoutRef.current = null; }
     correctCountRef.current = { left: 0, right: 0 };
+    responseTimesRef.current = { left: [], right: [] };
+    wrongStreakRef.current = 0;
+    setWrongStreak(0);
+    setMascotReaction("none");
+    setBuddyVisible(false);
     setShowGameEnd(false);
     setCurrentRound(1);
     setSelectedAnswerLeft(null);
@@ -473,6 +562,7 @@ export default function GameScreen() {
     setShowResult(false);
     setTeamScores({ left: 0, right: 0 });
     resetStreak();
+    clearCorrection();
     setCurrentQuestion(questionsRef.current[0]);
     soundService.play("gameStart");
     startTimerRef.current?.();
@@ -480,6 +570,27 @@ export default function GameScreen() {
 
   const maxRounds = currentMatch?.maxRounds || 10;
   const subject = currentMatch?.subject || "";
+
+  // Adapt HUD mascot continuously to failure streaks, urgent timer, and recovery
+  let liveMascotState: OrbState = "idle";
+  let liveMascotExpression: OrbExpressionName | undefined;
+
+  if (mascotReaction === "wrong") {
+    liveMascotState = "error";
+    liveMascotExpression = "sad";
+  } else if (mascotReaction === "correct") {
+    liveMascotState = "done";
+    liveMascotExpression = "joy";
+  } else if (timeRemaining <= 5 && timeRemaining > 0 && selectedAnswerLeft === null) {
+    liveMascotState = "thinking";
+    liveMascotExpression = wrongStreak > 0 ? "sad" : "surprised";
+  } else if (wrongStreak >= 2) {
+    liveMascotState = "thinking";
+    liveMascotExpression = "shy";
+  } else if (wrongStreak === 1) {
+    liveMascotState = "thinking";
+    liveMascotExpression = "hopeful";
+  }
 
   if (isSplitscreen) {
     return (
@@ -540,15 +651,22 @@ export default function GameScreen() {
       onExit={() => router.back()}
       onReview={() =>
         isSoloMode
-          ? router.push({ pathname: "/match/correction" as any, params: { matchId: matchId as string } })
+          ? router.push({
+              pathname: "/match/correction" as any,
+              params: { matchId: matchId as string, ...(subject ? { subject } : {}) },
+            })
           : router.push({
               pathname: "/match/review" as any,
               params: { matchId: matchId as string, childId: "mock-player", subject },
             })
       }
+      mascotState={liveMascotState}
+      mascotExpression={liveMascotExpression}
       buddyMessage={buddyMessage}
+      buddyTriggerKey={buddyTriggerKey}
+      buddyState={buddyState}
       buddyVisible={buddyVisible}
-      onHideBuddy={() => setBuddyVisible(false)}
+      onHideBuddy={handleHideBuddy}
     />
   );
 }

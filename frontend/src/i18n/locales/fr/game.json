@@ -31,7 +31,42 @@
     "playAgain": "Rejouer",
     "backToHome": "Retour à l'accueil",
     "wellDone": "Bien joué !",
-    "finalScore": "Score final : {{score}}"
+    "keepPracticing": "Continue de pratiquer !",
+    "finalScore": "Score final : {{score}}",
+    "reviewAnswers": "Revoir les réponses"
+  },
+  "buddy": {
+    "streak3": "En feu ! 3 d'affilée !",
+    "streak5": "Inarrêtable !",
+    "fast": "Rapide comme l'éclair !",
+    "timeout": "Temps écoulé ! Reste concentré !",
+    "streakLost": "Série perdue — relance-toi !",
+    "wrong1": "Presque ! Tu auras la suivante !",
+    "wrongStreak": "Prends ton temps — lis bien chaque option !",
+    "recovery": "Bien rattrapé ! C'est reparti !"
+  },
+  "correction": {
+    "title": "Correction",
+    "question": "Question {{number}}",
+    "summary": "{{correct}} / {{total}} correct",
+    "questionsCount": "{{count}} questions",
+    "missed": "Erreurs",
+    "questionMap": "Carte des questions",
+    "avgSpeed": "Moy. {{time}}s",
+    "filterAll": "Tout",
+    "filterMissed": "Erreurs",
+    "filterCorrect": "Justes",
+    "statusCorrect": "Juste",
+    "statusWrong": "Faux",
+    "statusSkipped": "Temps écoulé",
+    "perfectFilterTitle": "Sans faute !",
+    "perfectFilterSubtitle": "Tu as tout réussi — aucune erreur à revoir.",
+    "noCorrectFilterSubtitle": "Aucune bonne réponse sur cette série.",
+    "showAll": "Tout afficher",
+    "explanation": "Explication",
+    "skipped": "Temps écoulé — aucune réponse donnée",
+    "empty": "Aucune réponse à revoir",
+    "done": "Terminé"
   },
   "scoreboard": {
     "score": "Score"

@@ -1,24 +1,42 @@
 {
   "title": "Devoirs",
+  "subtitle": "Scanne une page pour obtenir de l'aide étape par étape et des quiz",
   "status": {
-    "ready": "✓ Prêt",
+    "ready": "Prêt",
     "analyzing": "Analyse…",
-    "failed": "✕ Échec"
+    "failed": "Échec"
   },
   "session": {
     "defaultTitle": "Session de devoirs",
-    "quizDone": "Quiz terminé ✓",
+    "quizDone": "Quiz terminé",
     "reviewTitle": "Revoir la photo",
+    "viewPhoto": "Agrandir la photo",
+    "solution": "Solution",
+    "copied": "Copié",
     "notFound": "Session introuvable",
     "assistTitle": "Assistance",
-    "noExplanation": "Aucune explication disponible."
+    "noExplanation": "Aucune explication disponible.",
+    "visualGuide": "Schéma visuel",
+    "cycle": "CYCLE",
+    "vennBoth": "Les deux",
+    "vennCommon": "En commun",
+    "callouts": {
+      "idea": "L'idée clé",
+      "tip": "Astuce",
+      "watchout": "Attention !",
+      "check": "Vérifie ta réponse",
+      "example": "Exemple"
+    }
   },
   "actions": {
-    "scanNew": "Scanner de nouveaux devoirs",
-    "scanNewDesc": "Photographiez une page et obtenez des explications IA",
+    "scanNew": "Scanner un devoir",
+    "scanNewDesc": "Prends une page en photo et obtiens des explications IA",
+    "scansRemaining": "{{remaining}}/{{limit}} scans restants aujourd'hui",
+    "unlimitedScans": "Scans illimités (mode dev)",
     "retake": "Reprendre",
     "analyze": "Analyser",
-    "library": "Bibliothèque"
+    "library": "Galerie",
+    "takePhoto": "Prendre"
   },
   "filters": {
     "all": "Tout"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "Demander à l'IA",
+    "askShort": "Aide IA",
     "subtitle": "Pose des questions sur tes devoirs",
     "placeholder": "Pose une question…",
-    "emptyState": "Pose des questions sur tes devoirs"
+    "emptyState": "Pose des questions sur tes devoirs",
+    "suggestions": {
+      "hintLabel": "Donne un indice",
+      "hintPrompt": "Peux-tu me donner un indice sans révéler toute la réponse ?",
+      "stepsLabel": "Étape par étape",
+      "stepsPrompt": "Peux-tu m'expliquer cela étape par étape ?",
+      "simpleLabel": "Expliquer simplement",
+      "simplePrompt": "Peux-tu expliquer l'idée principale en termes simples ?",
+      "firstLabel": "Première étape ?",
+      "firstPrompt": "Quelle devrait être ma première étape pour résoudre ceci ?"
+    }
   },
   "quiz": {
     "title": "Quiz",

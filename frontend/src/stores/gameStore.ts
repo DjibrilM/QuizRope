@@ -23,6 +23,8 @@ interface CorrectionItem {
   explanation: string;
   userAnswerIndex: number; // -1 = timeout/skipped
   isCorrect: boolean;
+  round?: number;
+  responseTime?: number; // milliseconds
 }
 
 interface StoreRoundResult {
@@ -75,6 +77,7 @@ interface GameState {
   streak: number;
   bestStreak: number;
   lastMatchCorrection: CorrectionItem[];
+  lastMatchCorrectionMatchId: string | null;
   children: Child[];
   locale: SupportedLanguage;
   subscriptionStatus: 'none' | 'active' | 'cancelled' | 'expired' | 'past_due' | 'checking';
@@ -107,8 +110,8 @@ interface GameState {
   setRoundResult: (result: StoreRoundResult | null) => void;
   setGameEndResult: (result: GameEndResult | null) => void;
   setChildren: (children: Child[]) => void;
-  pushCorrection: (item: CorrectionItem) => void;
-  setCorrections: (items: CorrectionItem[]) => void;
+  pushCorrection: (item: CorrectionItem, matchId?: string | null) => void;
+  setCorrections: (items: CorrectionItem[], matchId?: string | null) => void;
   clearCorrection: () => void;
   resetGame: () => void;
   setHasHydrated: (hydrated: boolean) => void;
@@ -139,6 +142,7 @@ export const useGameStore = create<GameState>()(
       streak: 0,
       bestStreak: 0,
       lastMatchCorrection: [],
+      lastMatchCorrectionMatchId: null,
       children: [],
       subscriptionStatus: 'active',
       subscriptionExpiresAt: null,
@@ -221,10 +225,42 @@ export const useGameStore = create<GameState>()(
       setRoundResult: (result) => set({ roundResult: result }),
       setGameEndResult: (result) => set({ gameEndResult: result }),
       setChildren: (children) => set({ children }),
-      pushCorrection: (item) =>
-        set((state) => ({ lastMatchCorrection: [...state.lastMatchCorrection, item] })),
-      setCorrections: (items) => set({ lastMatchCorrection: items }),
-      clearCorrection: () => set({ lastMatchCorrection: [] }),
+      pushCorrection: (item, matchId) =>
+        set((state) => {
+          const resolvedMatchId =
+            matchId !== undefined ? matchId : state.lastMatchCorrectionMatchId;
+          const baseList =
+            resolvedMatchId !== null &&
+            state.lastMatchCorrectionMatchId !== null &&
+            resolvedMatchId !== state.lastMatchCorrectionMatchId
+              ? []
+              : state.lastMatchCorrection;
+
+          if (
+            item.round !== undefined &&
+            baseList.some((existing) => existing.round === item.round)
+          ) {
+            return {
+              lastMatchCorrection: baseList,
+              lastMatchCorrectionMatchId: resolvedMatchId ?? null,
+            };
+          }
+
+          return {
+            lastMatchCorrection: [...baseList, item],
+            lastMatchCorrectionMatchId: resolvedMatchId ?? null,
+          };
+        }),
+      setCorrections: (items, matchId = null) =>
+        set({
+          lastMatchCorrection: items,
+          lastMatchCorrectionMatchId: matchId ?? null,
+        }),
+      clearCorrection: () =>
+        set({
+          lastMatchCorrection: [],
+          lastMatchCorrectionMatchId: null,
+        }),
       incrementStreak: () =>
         set((state) => ({
           streak: state.streak + 1,

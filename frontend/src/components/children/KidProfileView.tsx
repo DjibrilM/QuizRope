@@ -1,19 +1,19 @@
 import React from "react";
-import { View, Text } from "react-native";
-import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import type { ChildMatchSummary } from "@shared/types/analytics.types";
 import { apiService, type LeaderboardEntry } from "../../services/api";
 import { useGameStore } from "../../stores/gameStore";
 import * as guestDb from "../../services/guestDb";
-import {
-  AnimatedLoader,
-  AvatarIcon,
-  Button,
-} from "../common";
-import { FONTS } from "../../constants/theme";
+import { AnimatedLoader, AvatarIcon } from "../common";
+import { PillButton } from "../ui";
+import { FONTS, UI_COLORS, UI_RADII } from "../../constants/theme";
+import { getHeadingFont } from "../../utils/fontForLocale";
 import { getSubjectTheme } from "../../config/subjectThemes";
-import type { ChildMatchSummary } from "@shared/types/analytics.types";
+import { hapticsService } from "../../services/haptics";
 
 export function SubjectStatRow({
   subject,
@@ -26,160 +26,168 @@ export function SubjectStatRow({
   totalQuestions: number;
   accuracy: number;
 }) {
+  const { t } = useTranslation(["leaderboard", "analytics", "common"]);
   const theme = getSubjectTheme(subject);
+  const subjectLabel = t(`common:subjects.${subject.toUpperCase()}`, {
+    defaultValue: theme.label,
+  });
   const score = correctAnswers * 10;
   const maxScore = totalQuestions * 10;
-  const accuracyColor =
-    accuracy >= 70 ? "#10B981" : accuracy >= 40 ? "#F59E0B" : "#EF4444";
 
   return (
-    <View
-      style={{
-        backgroundColor: "#0D0B14",
-        borderRadius: 12,
-        padding: 14,
-        gap: 8,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+    <View style={styles.subjectCard}>
+      <View style={styles.subjectTopRow}>
+        <View style={styles.subjectLabelRow}>
           <View
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 5,
-              backgroundColor: theme.accentColor,
-            }}
+            style={[
+              styles.subjectDot,
+              { backgroundColor: theme.accentColor },
+            ]}
           />
-          <Text
-            style={{
-              fontSize: 14,
-              fontFamily: FONTS.bodyBold,
-              color: "#FFFFFF",
-            }}
-          >
-            {theme.label}
-          </Text>
+          <Text style={styles.subjectTitle}>{subjectLabel}</Text>
         </View>
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: FONTS.bodyBold,
-            color: accuracyColor,
-          }}
-        >
-          {accuracy}%
-        </Text>
+        <View style={styles.accuracyPill}>
+          <Text style={styles.accuracyPillText}>{accuracy}%</Text>
+        </View>
       </View>
 
-      {/* Accuracy bar */}
-      <View
-        style={{
-          height: 6,
-          backgroundColor: "#3D2E4A",
-          borderRadius: 3,
-          overflow: "hidden",
-        }}
-      >
+      <View style={styles.progressTrack}>
         <View
-          style={{
-            height: "100%",
-            width: `${Math.max(accuracy, 2)}%`,
-            backgroundColor: accuracyColor,
-            borderRadius: 3,
-          }}
+          style={[
+            styles.progressFill,
+            {
+              width: `${Math.max(accuracy, 3)}%`,
+            },
+          ]}
         />
       </View>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text
-          style={{ fontSize: 12, fontFamily: FONTS.body, color: "#B8A9C9" }}
-        >
-          Score: {score} / {maxScore}
+      <View style={styles.subjectBottomRow}>
+        <Text style={styles.subjectMeta}>
+          {t("leaderboard:scoreRatio", { score, max: maxScore })}
         </Text>
-        <Text
-          style={{ fontSize: 12, fontFamily: FONTS.body, color: "#7B6B8A" }}
-        >
-          {correctAnswers}/{totalQuestions} correct
+        <Text style={styles.subjectMetaMuted}>
+          {t("analytics:dashboard.correct", {
+            correct: correctAnswers,
+            total: totalQuestions,
+          })}
         </Text>
       </View>
     </View>
   );
 }
 
-export function MatchHistoryRow({ summary }: { summary: ChildMatchSummary }) {
+type MatchRowItem = {
+  matchId: string;
+  subject: string;
+  date: string | number | Date;
+  gameMode: string;
+  accuracy: number;
+  didWin: boolean;
+  correctAnswers?: number;
+  totalQuestions?: number;
+};
+
+export function MatchHistoryRow({
+  summary,
+  onPress,
+}: {
+  summary: MatchRowItem;
+  onPress?: () => void;
+}) {
+  const { t } = useTranslation(["analytics", "common"]);
+  const locale = useGameStore((s) => s.locale);
   const theme = getSubjectTheme(summary.subject);
-  const date = new Date(summary.date).toLocaleDateString(undefined, {
+  const subjectLabel = t(`common:subjects.${summary.subject.toUpperCase()}`, {
+    defaultValue: theme.label,
+  });
+  const date = new Date(summary.date).toLocaleDateString(locale || undefined, {
     month: "short",
     day: "numeric",
   });
   const isSolo = summary.gameMode === "solo";
-  const outcomeColor = summary.didWin ? "#10B981" : "#EF4444";
+  const outcomeColor = summary.didWin ? UI_COLORS.mint : UI_COLORS.coral;
+  const hasCounts =
+    typeof summary.correctAnswers === "number" &&
+    typeof summary.totalQuestions === "number" &&
+    summary.totalQuestions > 0;
+  const metaText = hasCounts
+    ? `${date} · ${t("analytics:dashboard.correct", {
+        correct: summary.correctAnswers,
+        total: summary.totalQuestions,
+      })}`
+    : `${date} · ${t("analytics:history.accuracy", {
+        accuracy: summary.accuracy,
+      })}`;
+  const isHighAccuracy = summary.accuracy >= 70;
 
-  return (
-    <View
-      style={{
-        backgroundColor: "#0D0B14",
-        borderRadius: 12,
-        padding: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-      }}
-    >
-      <View
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: theme.accentColor,
-          flexShrink: 0,
-        }}
-      />
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{ color: "#FFFFFF", fontSize: 13, fontFamily: FONTS.bodyBold }}
-        >
-          {theme.label}
+  const rowContent = (
+    <>
+      <View style={styles.matchTextCol}>
+        <Text style={styles.matchTitle} numberOfLines={1}>
+          {subjectLabel}
         </Text>
-        <Text
-          style={{
-            color: "#7B6B8A",
-            fontSize: 11,
-            fontFamily: FONTS.body,
-            marginTop: 1,
-          }}
-        >
-          {date} · {summary.accuracy}% accuracy
+        <Text style={styles.matchSub} numberOfLines={1}>
+          {metaText}
         </Text>
       </View>
-      {!isSolo && (
+
+      <View style={styles.matchRightCluster}>
+        {!isSolo ? (
+          <View
+            style={[
+              styles.outcomePill,
+              { backgroundColor: `${outcomeColor}1E` },
+            ]}
+          >
+            <Text style={[styles.outcomePillText, { color: outcomeColor }]}>
+              {summary.didWin
+                ? t("analytics:history.won")
+                : t("analytics:history.lost")}
+            </Text>
+          </View>
+        ) : null}
+
         <View
-          style={{
-            backgroundColor: `${outcomeColor}20`,
-            borderRadius: 8,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-          }}
+          style={[
+            styles.accuracyPill,
+            isHighAccuracy && styles.accuracyPillHigh,
+          ]}
         >
           <Text
-            style={{
-              color: outcomeColor,
-              fontSize: 11,
-              fontFamily: FONTS.bodyBold,
-            }}
+            style={[
+              styles.accuracyPillText,
+              isHighAccuracy && { color: UI_COLORS.mint },
+            ]}
           >
-            {summary.didWin ? "Won" : "Lost"}
+            {summary.accuracy}%
           </Text>
         </View>
-      )}
-    </View>
+
+        {onPress ? (
+          <Ionicons
+            name="chevron-forward"
+            size={15}
+            color={UI_COLORS.textMuted}
+          />
+        ) : null}
+      </View>
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={styles.matchRow}>{rowContent}</View>;
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      style={styles.matchRow}
+    >
+      {rowContent}
+    </TouchableOpacity>
   );
 }
 
@@ -190,9 +198,14 @@ export function KidProfileView({
   entry: LeaderboardEntry & { avatarUrl?: string };
   onLogout: () => void;
 }) {
-  const { t } = useTranslation(["leaderboard", "common"]);
-  const { userRole } = useGameStore();
+  const { t } = useTranslation(["leaderboard", "common", "auth"]);
+  const { userRole, locale } = useGameStore();
   const isGuest = userRole === "guest";
+
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["childStats", entry.playerId],
@@ -208,14 +221,12 @@ export function KidProfileView({
     enabled: !isGuest,
   });
 
-  // Guest: fetch aggregated stats from local SQLite
   const { data: guestStats, isLoading: guestStatsLoading } = useQuery({
     queryKey: ["guestProfileStats"],
     queryFn: guestDb.getGuestProfileStats,
     enabled: isGuest,
   });
 
-  // For children, fetch cached profile from local SQLite as fallback
   const { data: cachedProfile } = useQuery({
     queryKey: ["cachedChildProfile", entry.playerId],
     queryFn: () => guestDb.getChildProfile(entry.playerId),
@@ -225,8 +236,8 @@ export function KidProfileView({
   const displayName = entry.displayName || cachedProfile?.displayName || "Kid";
   const avatarUrl = entry.avatarUrl || cachedProfile?.avatarUrl;
 
-  const recentMatches = isGuest
-    ? ((guestStats?.recentMatches ?? []) as any[])
+  const recentMatches: MatchRowItem[] = isGuest
+    ? (guestStats?.recentMatches ?? [])
     : matchHistory.slice(0, 5);
 
   const subjectStats = isGuest
@@ -236,185 +247,122 @@ export function KidProfileView({
   const isHistoryLoading = isGuest ? guestStatsLoading : historyLoading;
   const isSubjectLoading = isGuest ? guestStatsLoading : statsLoading;
 
-  const sectionLabel = {
-    color: "#7B6B8A",
-    fontSize: 11,
-    fontFamily: FONTS.bodySemiBold,
-    letterSpacing: 1.5,
-    textTransform: "uppercase" as const,
-    marginBottom: 12,
-  };
-
   return (
-    <View>
-      {/* ── Avatar header ── */}
-      <View
-        style={{
-          alignItems: "center",
-          paddingTop: 16,
-          paddingBottom: 28,
-          gap: 8,
-        }}
-      >
-        <View
-          style={{
-            width: 100,
-            height: 100,
-            backgroundColor: "#9B59B6",
-            borderRadius: 50,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 4,
-            borderColor: "#3D2E4A",
-            marginBottom: 4,
-          }}
-        >
-          <AvatarIcon avatarId={avatarUrl} size={62} />
+    <View style={styles.root}>
+      {/* Clean Avatar Header */}
+      <View style={styles.headerBlock}>
+        <View style={styles.avatarRing}>
+          <AvatarIcon avatarId={avatarUrl} size={96} />
         </View>
+
         <Text
-          style={{
-            color: "#FFFFFF",
-            fontSize: 28,
-            fontFamily: "LuckiestGuy_400Regular",
-          }}
+          style={[styles.displayName, { fontFamily: headingFont }]}
+          numberOfLines={1}
         >
           {displayName}
         </Text>
-        <Text
-          style={{
-            color: "#B8A9C9",
-            fontSize: 14,
-            fontFamily: FONTS.body,
-          }}
-        >
+        <Text style={styles.gamesSubtitle}>
           {t("leaderboard:gamesPlayed", { count: entry.gamesPlayed })}
         </Text>
       </View>
 
-      {/* ── Global stats ── */}
-      <View style={{ flexDirection: "row", gap: 12, marginBottom: 28 }}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "#0D0B14",
-            padding: 16,
-            borderRadius: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text
-            style={{
-              color: "#10B981",
-              fontSize: 30,
-              fontFamily: "LuckiestGuy_400Regular",
-            }}
-          >
-            {entry.correctAnswers}
-          </Text>
-          <Text
-            style={{
-              color: "#7B6B8A",
-              fontSize: 12,
-              fontFamily: FONTS.bodySemiBold,
-              textTransform: "uppercase",
-              marginTop: 4,
-            }}
-          >
-            {t("leaderboard:correct")}
-          </Text>
-        </View>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "#0D0B14",
-            padding: 16,
-            borderRadius: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text
-            style={{
-              color: "#FFD93D",
-              fontSize: 30,
-              fontFamily: "LuckiestGuy_400Regular",
-            }}
-          >
-            {entry.accuracy}%
-          </Text>
-          <Text
-            style={{
-              color: "#7B6B8A",
-              fontSize: 12,
-              fontFamily: FONTS.bodySemiBold,
-              textTransform: "uppercase",
-              marginTop: 4,
-            }}
-          >
-            {t("leaderboard:accuracy")}
-          </Text>
+      {/* Concentric Stats Module */}
+      <View style={styles.statsShell}>
+        <View style={styles.statsRow}>
+          <View style={styles.statTile}>
+            <Text
+              style={[
+                styles.statValue,
+                { fontFamily: headingFont, color: UI_COLORS.mint },
+              ]}
+              numberOfLines={1}
+            >
+              {entry.correctAnswers}
+            </Text>
+            <Text style={styles.statLabel}>{t("leaderboard:correct")}</Text>
+          </View>
+
+          <View style={styles.statTile}>
+            <Text
+              style={[styles.statValue, { fontFamily: headingFont }]}
+              numberOfLines={1}
+            >
+              {entry.accuracy}%
+            </Text>
+            <Text style={styles.statLabel}>{t("leaderboard:accuracy")}</Text>
+          </View>
         </View>
       </View>
 
-      {/* ── Recent matches ── */}
-      <Text style={sectionLabel}>{t("leaderboard:recentMatches", "Recent Matches")}</Text>
+      {/* Recent Matches */}
+      <Text style={styles.sectionLabel}>
+        {t("leaderboard:recentMatches")}
+      </Text>
 
-
-      {isHistoryLoading && (
-        <View style={{ alignItems: "center", paddingVertical: 16 }}>
+      {isHistoryLoading ? (
+        <View style={styles.loaderWrap}>
           <AnimatedLoader size="sm" />
         </View>
-      )}
-
-      {!isHistoryLoading && recentMatches.length === 0 && (
-        <Text
-          style={{
-            color: "#7B6B8A",
-            fontSize: 13,
-            fontFamily: FONTS.body,
-            textAlign: "center",
-            paddingVertical: 12,
-            marginBottom: 16,
-          }}
-        >
-          No matches played yet
-        </Text>
-      )}
-
-      {!isHistoryLoading && recentMatches.length > 0 && (
-        <View style={{ gap: 8, marginBottom: 28 }}>
+      ) : recentMatches.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons
+            name="game-controller-outline"
+            size={20}
+            color={UI_COLORS.textMuted}
+          />
+          <Text style={styles.emptyCardText}>
+            {t("leaderboard:noMatchesYet")}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.listShell}>
           {recentMatches.map((m) => (
-            <MatchHistoryRow key={m.matchId} summary={m} />
+            <MatchHistoryRow
+              key={m.matchId}
+              summary={m}
+              onPress={() => {
+                hapticsService.selection();
+                if (isGuest || m.gameMode === "solo") {
+                  router.push({
+                    pathname: "/match/correction" as any,
+                    params: { matchId: m.matchId, subject: m.subject },
+                  });
+                } else {
+                  router.push({
+                    pathname: "/match/review" as any,
+                    params: {
+                      matchId: m.matchId,
+                      childId: entry.playerId,
+                      subject: m.subject,
+                    },
+                  });
+                }
+              }}
+            />
           ))}
         </View>
       )}
 
-      {/* ── By subject ── */}
-      <Text style={sectionLabel}>{t("leaderboard:bySubject", "By Subject")}</Text>
+      {/* By Subject */}
+      <Text style={styles.sectionLabel}>{t("leaderboard:bySubject")}</Text>
 
-
-      {isSubjectLoading && (
-        <View style={{ alignItems: "center", paddingVertical: 20 }}>
+      {isSubjectLoading ? (
+        <View style={styles.loaderWrap}>
           <AnimatedLoader size="sm" />
         </View>
-      )}
-
-      {!isSubjectLoading && subjectStats.length === 0 && (
-        <Text
-          style={{
-            color: "#7B6B8A",
-            fontSize: 13,
-            fontFamily: FONTS.body,
-            textAlign: "center",
-            paddingVertical: 12,
-            marginBottom: 16,
-          }}
-        >
-          No subject data yet
-        </Text>
-      )}
-
-      {!isSubjectLoading && subjectStats.length > 0 && (
-        <View style={{ gap: 10, marginBottom: 28 }}>
+      ) : subjectStats.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons
+            name="bar-chart-outline"
+            size={20}
+            color={UI_COLORS.textMuted}
+          />
+          <Text style={styles.emptyCardText}>
+            {t("leaderboard:noSubjectDataYet")}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.subjectStack}>
           {subjectStats.map((s) => (
             <SubjectStatRow
               key={s.subject}
@@ -427,13 +375,238 @@ export function KidProfileView({
         </View>
       )}
 
-      {/* ── Logout ── */}
-      <Button
-        label="Log out"
-        variant="danger"
-        className="w-full min-w-full"
+      {/* Sign Out CTA */}
+      <PillButton
+        label={t("auth:logout.button", "Log out")}
+        variant="primary"
         onPress={onLogout}
+        size="lg"
+        icon={<Ionicons name="log-out-outline" size={18} color="#FFFFFF" />}
+        style={styles.logoutButton}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    width: "100%",
+  },
+  headerBlock: {
+    alignItems: "center",
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  avatarRing: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: "rgba(255, 255, 255, 0.09)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginBottom: 14,
+  },
+  displayName: {
+    fontSize: 30,
+    lineHeight: 36,
+    color: UI_COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  gamesSubtitle: {
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    color: UI_COLORS.textSecondary,
+  },
+  statsShell: {
+    backgroundColor: "#161221",
+    borderRadius: 30,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 5,
+    marginBottom: 26,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  statTile: {
+    flex: 1,
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderRadius: 25,
+    borderCurve: "continuous",
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    gap: 4,
+  },
+  statValue: {
+    fontSize: 28,
+    lineHeight: 34,
+    color: UI_COLORS.textPrimary,
+  },
+  statLabel: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: UI_COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sectionLabel: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    color: UI_COLORS.textMuted,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  loaderWrap: {
+    alignItems: "center",
+    paddingVertical: 18,
+    marginBottom: 18,
+  },
+  emptyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 24,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  emptyCardText: {
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    color: UI_COLORS.textSecondary,
+  },
+  listShell: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 28,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 5,
+    gap: 6,
+    marginBottom: 26,
+  },
+  subjectStack: {
+    gap: 10,
+    marginBottom: 28,
+  },
+  subjectCard: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 24,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 16,
+    gap: 10,
+  },
+  subjectTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  subjectLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  subjectDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  subjectTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 15,
+    color: UI_COLORS.textPrimary,
+  },
+  accuracyPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: UI_RADII.pill,
+    backgroundColor: UI_COLORS.surfaceElevated,
+  },
+  accuracyPillHigh: {
+    backgroundColor: "rgba(52, 211, 153, 0.14)",
+  },
+  accuracyPillText: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 12,
+    color: UI_COLORS.textPrimary,
+  },
+  progressTrack: {
+    height: 7,
+    backgroundColor: "#261F36",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: UI_COLORS.primary,
+  },
+  subjectBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  subjectMeta: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: UI_COLORS.textSecondary,
+  },
+  subjectMetaMuted: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    color: UI_COLORS.textMuted,
+  },
+  matchRow: {
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderRadius: 23,
+    borderCurve: "continuous",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  matchTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  matchTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 15,
+    color: UI_COLORS.textPrimary,
+  },
+  matchSub: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    color: UI_COLORS.textSecondary,
+  },
+  matchRightCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  outcomePill: {
+    borderRadius: UI_RADII.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  outcomePillText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+  },
+  logoutButton: {
+    backgroundColor: "#EF4444",
+  },
+});

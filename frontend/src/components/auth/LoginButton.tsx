@@ -1,21 +1,28 @@
 import React from "react";
-import { Pressable, Text } from "react-native";
-import Svg, { Path, Circle } from "react-native-svg";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { hapticsService } from "../../services/haptics";
 import { AnimatedLoader } from "../common/AnimatedLoader";
-import { FONTS } from "../../constants/theme";
+import { FONTS, UI_COLORS, UI_RADII } from "../../constants/theme";
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface LoginButtonProps {
   onPress: () => void;
   loading?: boolean;
+  disabled?: boolean;
   label?: string;
-  variant?: "google" | "email" | "child" | "mock";
 }
 
 function GoogleIcon() {
   return (
-    <Svg width={22} height={22} viewBox="0 0 48 48" style={{ marginRight: 12 }}>
+    <Svg width={20} height={20} viewBox="0 0 48 48">
       <Path
         fill="#EA4335"
         d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
@@ -36,102 +43,102 @@ function GoogleIcon() {
   );
 }
 
-function ChildIcon() {
-  return (
-    <Svg width={22} height={22} viewBox="0 0 24 24" style={{ marginRight: 12 }}>
-      <Circle cx="12" cy="7" r="4" fill="#FFFFFF" />
-      <Path
-        fill="#FFFFFF"
-        d="M12 13c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z"
-      />
-    </Svg>
-  );
-}
-
-const VARIANT_STYLES: Record<
-  string,
-  { bg: string; activeBg: string; textClass: string; loaderColor: string }
-> = {
-  google: {
-    bg: "bg-white",
-    activeBg: "active:bg-gray-100",
-    textClass: "text-gray-800",
-    loaderColor: "#1E293B",
-  },
-  email: {
-    bg: "bg-game-indigo",
-    activeBg: "active:bg-indigo-700",
-    textClass: "text-white",
-    loaderColor: "#FFFFFF",
-  },
-  child: {
-    bg: "bg-game-purple",
-    activeBg: "active:bg-violet-800",
-    textClass: "text-white",
-    loaderColor: "#FFFFFF",
-  },
-};
-
+/**
+ * Primary matte #6C5CE7 stadium pill CTA for Google Authentication with a
+ * concentric white circular side badge holding the Google G emblem.
+ */
 export function LoginButton({
   onPress,
   loading = false,
+  disabled = false,
   label,
-  variant = "google",
 }: LoginButtonProps) {
-  const { t } = useTranslation("common");
-  const displayLabel = label ?? t("buttons.continue");
+  const { t } = useTranslation(["auth", "common"]);
+  const scale = useSharedValue(1);
+  const isDisabled = disabled || loading;
+  const displayLabel =
+    label ?? t("auth:login.continueWithGoogle", "Continue with Google");
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const handlePress = () => {
+    if (isDisabled) return;
     hapticsService.light();
     onPress();
   };
 
-  if (variant === "mock") {
-    return (
-      <Pressable
-        onPress={handlePress}
-        disabled={loading}
-        className="mt-4 py-3 px-6 active:opacity-70"
-      >
-        <Text
-          className="text-sm text-center font-medium"
-          style={{ color: "#7B6B8A", fontFamily: FONTS.body }}
-        >
-          {displayLabel}
-        </Text>
-      </Pressable>
-    );
-  }
-
-  const styles = VARIANT_STYLES[variant];
-
-  const icon =
-    variant === "google" ? (
-      <GoogleIcon />
-    ) : variant === "child" ? (
-      <ChildIcon />
-    ) : null;
-
   return (
-    <Pressable
+    <AnimatedTouchable
       onPress={handlePress}
-      disabled={loading}
-      className={`w-full max-w-sm py-4 min-h-12 px-6 rounded-2xl flex-row items-center justify-center mb-4 ${styles.bg} ${styles.activeBg}`}
-      style={loading ? { opacity: 0.7 } : undefined}
+      onPressIn={() => {
+        if (isDisabled) return;
+        scale.value = withSpring(0.985, { damping: 20, stiffness: 360 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 20, stiffness: 360 });
+      }}
+      activeOpacity={0.88}
+      disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={displayLabel}
-      accessibilityState={{ busy: loading }}
+      accessibilityState={{ busy: loading, disabled: isDisabled }}
+      style={[
+        styles.pill,
+        isDisabled && styles.pillDisabled,
+        animatedStyle,
+      ]}
     >
-      {loading ? <AnimatedLoader color={styles.loaderColor} size="sm" /> : icon}
-      <Text
-        className={`text-lg font-bold ${styles.textClass}`}
-        style={{
-          fontFamily: "Bungee_400Regular",
-          letterSpacing: 0.5,
-          marginLeft: loading ? 10 : 0,
-        }}
-      >
-        {loading ? t("labels.connecting") : displayLabel}
+      <View style={styles.iconBall}>
+        {loading ? (
+          <AnimatedLoader color="#14101D" size="sm" />
+        ) : (
+          <GoogleIcon />
+        )}
+      </View>
+
+      <Text style={styles.label} numberOfLines={1}>
+        {loading ? t("common:labels.connecting", "Connecting...") : displayLabel}
       </Text>
-    </Pressable>
+
+      <View style={styles.balanceSpacer} />
+    </AnimatedTouchable>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    width: "100%",
+    height: 54,
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    backgroundColor: UI_COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+  },
+  pillDisabled: {
+    opacity: 0.65,
+  },
+  iconBall: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  label: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: FONTS.bodyBlack,
+    fontSize: 16,
+    color: UI_COLORS.textOnPrimary,
+    letterSpacing: 0.25,
+  },
+  balanceSpacer: {
+    width: 44,
+  },
+});

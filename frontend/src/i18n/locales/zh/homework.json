@@ -1,24 +1,42 @@
 {
   "title": "作业",
+  "subtitle": "拍摄作业页面即可获取分步讲解与练习测验",
   "status": {
-    "ready": "✓ 就绪",
+    "ready": "就绪",
     "analyzing": "分析中…",
-    "failed": "✕ 失败"
+    "failed": "失败"
   },
   "session": {
     "defaultTitle": "作业会话",
-    "quizDone": "测验完成 ✓",
+    "quizDone": "测验完成",
     "reviewTitle": "查看照片",
+    "viewPhoto": "查看大图",
+    "solution": "解答",
+    "copied": "已复制",
     "notFound": "找不到会话",
     "assistTitle": "辅助",
-    "noExplanation": "暂无解释。"
+    "noExplanation": "暂无解释。",
+    "visualGuide": "可视化图解",
+    "cycle": "循环",
+    "vennBoth": "两者共有",
+    "vennCommon": "共同点",
+    "callouts": {
+      "idea": "核心思路",
+      "tip": "小贴士",
+      "watchout": "注意避坑！",
+      "check": "检查答案",
+      "example": "例子"
+    }
   },
   "actions": {
     "scanNew": "扫描新作业",
     "scanNewDesc": "拍摄页面并获取AI解释",
+    "scansRemaining": "今日剩余 {{remaining}}/{{limit}} 次扫描",
+    "unlimitedScans": "无限次扫描（开发模式）",
     "retake": "重拍",
     "analyze": "分析",
-    "library": "图库"
+    "library": "相册",
+    "takePhoto": "拍照"
   },
   "filters": {
     "all": "全部"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "向AI提问",
+    "askShort": "问AI",
     "subtitle": "询问任何关于作业的问题",
     "placeholder": "提问…",
-    "emptyState": "询问任何关于作业的问题"
+    "emptyState": "询问任何关于作业的问题",
+    "suggestions": {
+      "hintLabel": "给我提示",
+      "hintPrompt": "能不直接说出完整答案，给我一点提示吗？",
+      "stepsLabel": "分步讲解",
+      "stepsPrompt": "能一步一步地给我讲解这道题吗？",
+      "simpleLabel": "通俗解释",
+      "simplePrompt": "能用简单易懂的话解释一下核心思路吗？",
+      "firstLabel": "第一步做什么？",
+      "firstPrompt": "解决这道题我的第一步应该怎么做？"
+    }
   },
   "quiz": {
     "title": "测验",

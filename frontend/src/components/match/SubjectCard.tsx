@@ -1,20 +1,26 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { hapticsService } from "../../services/haptics";
+import { useGameStore } from "../../stores/gameStore";
 import { SubjectIcon } from "./SubjectIcons";
 import { BouncePress } from "../common/BouncePress";
-import { FONTS } from "../../constants/theme";
+import { FONTS, UI_COLORS, UI_RADII } from "../../constants/theme";
+import { getHeadingFont } from "../../utils/fontForLocale";
 
-const SUBJECT_STYLES: Record<string, { bg: string; bgSelected: string; accent: string; glow: string }> = {
-  MATH:      { bg: "#1A1520", bgSelected: "#1C1525", accent: "#60A5FA", glow: "#3B82F620" },
-  SCIENCE:   { bg: "#1A1520", bgSelected: "#181825", accent: "#A78BFA", glow: "#7C3AED20" },
-  ENGLISH:   { bg: "#1A1520", bgSelected: "#1E1A15", accent: "#FBBF24", glow: "#F59E0B20" },
-  HISTORY:   { bg: "#1A1520", bgSelected: "#1E1520", accent: "#F472B6", glow: "#DB277720" },
-  GEOGRAPHY: { bg: "#1A1520", bgSelected: "#151E1A", accent: "#34D399", glow: "#05966920" },
+const SUBJECT_ACCENTS: Record<string, { tint: string; color: string }> = {
+  MATH: { tint: "rgba(96, 165, 250, 0.14)", color: "#60A5FA" },
+  SCIENCE: { tint: "rgba(167, 139, 250, 0.14)", color: "#A78BFA" },
+  ENGLISH: { tint: "rgba(251, 191, 36, 0.14)", color: "#FBBF24" },
+  HISTORY: { tint: "rgba(244, 114, 182, 0.14)", color: "#F472B6" },
+  GEOGRAPHY: { tint: "rgba(52, 211, 153, 0.14)", color: "#34D399" },
 };
 
-const FALLBACK = { bg: "#1A1520", bgSelected: "#1A1520", accent: "#9B59B6", glow: "#9B59B620" };
+const FALLBACK_ACCENT = {
+  tint: "rgba(108, 92, 231, 0.16)",
+  color: UI_COLORS.primary,
+};
 
 interface SubjectCardProps {
   subject: string;
@@ -22,10 +28,21 @@ interface SubjectCardProps {
   onPress: (subject: string) => void;
 }
 
-export function SubjectCard({ subject, selected, onPress }: SubjectCardProps) {
+export function SubjectCard({
+  subject,
+  selected = false,
+  onPress,
+}: SubjectCardProps) {
   const { t } = useTranslation(["common", "match"]);
-  const style = SUBJECT_STYLES[subject] || FALLBACK;
+  const locale = useGameStore((s) => s.locale);
+  const accent = SUBJECT_ACCENTS[subject] || FALLBACK_ACCENT;
   const label = t(`common:subjects.${subject.toUpperCase()}`);
+  const hint = t(`match:create.subjectHint.${subject}`);
+
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   return (
     <BouncePress
@@ -33,59 +50,120 @@ export function SubjectCard({ subject, selected, onPress }: SubjectCardProps) {
         hapticsService.selection();
         onPress(subject);
       }}
-      style={{
-        flex: 1,
-        minWidth: "45%",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 24,
-        paddingVertical: 24,
-        paddingHorizontal: 16,
-        backgroundColor: selected ? style.bgSelected : style.bg,
-        borderWidth: 0,
-        borderColor: "transparent",
-      }}
-      accessibilityRole="radio"
-      accessibilityState={{ selected: !!selected }}
-      accessibilityLabel={label}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${label}. ${hint}`}
+      style={[
+        styles.pill,
+        selected ? styles.pillSelected : styles.pillDefault,
+      ]}
     >
-      {/* Icon container with accent glow */}
       <View
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: 36,
-          backgroundColor: selected ? style.accent + "20" : style.glow,
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 12,
-        }}
+        style={[
+          styles.iconBall,
+          { backgroundColor: selected ? "rgba(255, 255, 255, 0.18)" : accent.tint },
+        ]}
       >
-        <SubjectIcon subject={subject} size={40} />
+        <SubjectIcon subject={subject} size={30} />
       </View>
 
-      <Text
-        style={{
-          color: selected ? style.accent : "#FFFFFF",
-          fontSize: 16,
-          fontFamily: FONTS.heading,
-          textAlign: "center",
-        }}
-      >
-        {label}
-      </Text>
+      <View style={styles.textBlock}>
+        <Text
+          style={[
+            styles.title,
+            {
+              fontFamily: headingFont,
+              color: UI_COLORS.textPrimary,
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              color: selected
+                ? UI_COLORS.textSubtleOnPrimary
+                : UI_COLORS.textSecondary,
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {hint}
+        </Text>
+      </View>
 
-      <Text
-        style={{
-          color: selected ? style.accent + "90" : "#5A4B6B",
-          fontSize: 11,
-          fontFamily: FONTS.body,
-          textAlign: "center",
-          marginTop: 4,
-        }}
+      <View
+        style={[
+          styles.chevronWell,
+          selected && styles.chevronWellSelected,
+        ]}
       >
-        {t(`match:create.subjectHint.${subject}`)}
-      </Text>
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={selected ? "#FFFFFF" : UI_COLORS.textMuted}
+        />
+      </View>
     </BouncePress>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    paddingVertical: 5,
+    paddingLeft: 5,
+    paddingRight: 14,
+    gap: 12,
+  },
+  pillDefault: {
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
+  },
+  pillSelected: {
+    backgroundColor: UI_COLORS.primary,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+  },
+  iconBall: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textBlock: {
+    flex: 1,
+    gap: 1,
+  },
+  title: {
+    fontSize: 16,
+    lineHeight: 20,
+    paddingTop: 1,
+    letterSpacing: 0.4,
+  },
+  subtitle: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  chevronWell: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  chevronWellSelected: {
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+});

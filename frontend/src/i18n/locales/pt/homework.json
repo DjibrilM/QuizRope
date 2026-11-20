@@ -1,24 +1,42 @@
 {
   "title": "Dever de casa",
+  "subtitle": "Escaneie uma página para ajuda passo a passo e quizzes",
   "status": {
-    "ready": "✓ Pronto",
+    "ready": "Pronto",
     "analyzing": "Analisando…",
-    "failed": "✕ Falhou"
+    "failed": "Falhou"
   },
   "session": {
     "defaultTitle": "Sessão de dever de casa",
-    "quizDone": "Quiz concluído ✓",
+    "quizDone": "Quiz concluído",
     "reviewTitle": "Rever foto",
+    "viewPhoto": "Ver foto completa",
+    "solution": "Solução",
+    "copied": "Copiado",
     "notFound": "Sessão não encontrada",
     "assistTitle": "Assistir",
-    "noExplanation": "Nenhuma explicação disponível."
+    "noExplanation": "Nenhuma explicação disponível.",
+    "visualGuide": "Guia visual",
+    "cycle": "CICLO",
+    "vennBoth": "Ambos",
+    "vennCommon": "Em comum",
+    "callouts": {
+      "idea": "Ideia principal",
+      "tip": "Dica útil",
+      "watchout": "Atenção!",
+      "check": "Confira sua resposta",
+      "example": "Exemplo"
+    }
   },
   "actions": {
     "scanNew": "Escanear novo dever",
     "scanNewDesc": "Fotografe uma página e obtenha explicações de IA",
+    "scansRemaining": "{{remaining}}/{{limit}} escaneamentos disponíveis hoje",
+    "unlimitedScans": "Escaneamentos ilimitados (dev)",
     "retake": "Tirar novamente",
     "analyze": "Analisar",
-    "library": "Biblioteca"
+    "library": "Galeria",
+    "takePhoto": "Tirar foto"
   },
   "filters": {
     "all": "Todos"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "Perguntar à IA",
+    "askShort": "Perguntar IA",
     "subtitle": "Pergunte qualquer coisa sobre o seu dever",
     "placeholder": "Faça uma pergunta…",
-    "emptyState": "Pergunte qualquer coisa sobre o seu dever"
+    "emptyState": "Pergunte qualquer coisa sobre o seu dever",
+    "suggestions": {
+      "hintLabel": "Me dê uma dica",
+      "hintPrompt": "Pode me dar uma dica sem revelar toda a resposta?",
+      "stepsLabel": "Passo a passo",
+      "stepsPrompt": "Pode explicar isso passo a passo?",
+      "simpleLabel": "Explicar simples",
+      "simplePrompt": "Pode explicar a ideia principal de forma simples?",
+      "firstLabel": "Primeiro passo?",
+      "firstPrompt": "Qual deve ser o meu primeiro passo para resolver isso?"
+    }
   },
   "quiz": {
     "title": "Quizzes",

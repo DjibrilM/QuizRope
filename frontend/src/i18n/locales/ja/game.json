@@ -31,7 +31,42 @@
     "playAgain": "もう一度プレイ",
     "backToHome": "ホームに戻る",
     "wellDone": "よくできました！",
-    "finalScore": "最終スコア：{{score}}"
+    "keepPracticing": "この調子で練習しよう！",
+    "finalScore": "最終スコア：{{score}}",
+    "reviewAnswers": "解答を見直す"
+  },
+  "buddy": {
+    "streak3": "絶好調！3連続正解！",
+    "streak5": "止められない勢い！",
+    "fast": "電光石火の速さ！",
+    "timeout": "時間切れ！次の問題で挽回しよう！",
+    "streakLost": "連続記録ストップ — 切り替えていこう！",
+    "wrong1": "おしい！次はきっと大丈夫！",
+    "wrongStreak": "落ち着いて、選択肢をゆっくり読もう！",
+    "recovery": "ナイスリカバリー！"
+  },
+  "correction": {
+    "title": "くわしい見直し",
+    "question": "問題 {{number}}",
+    "summary": "{{correct}} / {{total}} 正解",
+    "questionsCount": "{{count}}問",
+    "missed": "不正解",
+    "questionMap": "問題マップ",
+    "avgSpeed": "平均 {{time}}秒",
+    "filterAll": "すべて",
+    "filterMissed": "不正解",
+    "filterCorrect": "正解",
+    "statusCorrect": "正解",
+    "statusWrong": "不正解",
+    "statusSkipped": "時間切れ",
+    "perfectFilterTitle": "パーフェクト！",
+    "perfectFilterSubtitle": "全問正解です — まちがえた問題はありません。",
+    "noCorrectFilterSubtitle": "今回の正解はありませんでした。",
+    "showAll": "すべて表示",
+    "explanation": "解説",
+    "skipped": "時間切れ — 未回答",
+    "empty": "見直す回答がありません",
+    "done": "完了"
   },
   "scoreboard": {
     "score": "スコア"

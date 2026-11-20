@@ -31,7 +31,42 @@
     "playAgain": "再玩一次",
     "backToHome": "返回主页",
     "wellDone": "做得好！",
-    "finalScore": "最终得分：{{score}}"
+    "keepPracticing": "继续加油练习！",
+    "finalScore": "最终得分：{{score}}",
+    "reviewAnswers": "查看解析"
+  },
+  "buddy": {
+    "streak3": "势头正旺！连对 3 题！",
+    "streak5": "势不可挡！",
+    "fast": "快如闪电！",
+    "timeout": "超时了！下一题专注点！",
+    "streakLost": "连对中断 — 重新出发！",
+    "wrong1": "差一点 — 下一题没问题！",
+    "wrongStreak": "放慢节奏，仔细看清每个选项！",
+    "recovery": "重回状态！干得漂亮！"
+  },
+  "correction": {
+    "title": "完整解析",
+    "question": "第 {{number}} 题",
+    "summary": "答对 {{correct}} / {{total}} 题",
+    "questionsCount": "共 {{count}} 题",
+    "missed": "错题",
+    "questionMap": "题目概览",
+    "avgSpeed": "平均 {{time}}秒",
+    "filterAll": "全部",
+    "filterMissed": "错题",
+    "filterCorrect": "答对",
+    "statusCorrect": "正确",
+    "statusWrong": "错误",
+    "statusSkipped": "超时",
+    "perfectFilterTitle": "全部答对！",
+    "perfectFilterSubtitle": "这一轮零失误，没有需要复习的错题。",
+    "noCorrectFilterSubtitle": "这一轮暂时没有答对的题目。",
+    "showAll": "显示全部题目",
+    "explanation": "解析",
+    "skipped": "已超时 — 未作答",
+    "empty": "暂无可查看的题目",
+    "done": "完成"
   },
   "scoreboard": {
     "score": "得分"

@@ -1,24 +1,42 @@
 {
   "title": "الواجبات المنزلية",
+  "subtitle": "امسح أي صفحة للحصول على شرح خطوة بخطوة واختبارات تدريبية",
   "status": {
-    "ready": "✓ جاهز",
+    "ready": "جاهز",
     "analyzing": "جاري التحليل…",
-    "failed": "✕ فشل"
+    "failed": "فشل"
   },
   "session": {
     "defaultTitle": "جلسة واجب منزلي",
-    "quizDone": "الاختبار منتهٍ ✓",
+    "quizDone": "الاختبار منتهٍ",
     "reviewTitle": "مراجعة الصورة",
+    "viewPhoto": "عرض الصورة كاملة",
+    "solution": "الحل",
+    "copied": "تم النسخ",
     "notFound": "الجلسة غير موجودة",
     "assistTitle": "المساعدة",
-    "noExplanation": "لا يوجد شرح متاح."
+    "noExplanation": "لا يوجد شرح متاح.",
+    "visualGuide": "دليل بصري",
+    "cycle": "دورة",
+    "vennBoth": "كلاهما",
+    "vennCommon": "مشترك",
+    "callouts": {
+      "idea": "الفكرة الأساسية",
+      "tip": "نصيحة مفيدة",
+      "watchout": "انتبه!",
+      "check": "تحقق من إجابتك",
+      "example": "مثال"
+    }
   },
   "actions": {
     "scanNew": "مسح واجب جديد",
     "scanNewDesc": "صوّر صفحة واحصل على شروحات الذكاء الاصطناعي",
+    "scansRemaining": "{{remaining}}/{{limit}} عمليات مسح متبقية اليوم",
+    "unlimitedScans": "مسح غير محدود (وضع التطوير)",
     "retake": "إعادة التصوير",
     "analyze": "تحليل",
-    "library": "المكتبة"
+    "library": "المعرض",
+    "takePhoto": "التقاط"
   },
   "filters": {
     "all": "الكل"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "اسأل الذكاء الاصطناعي",
+    "askShort": "اسأل الذكاء",
     "subtitle": "اسأل أي شيء عن واجبك",
     "placeholder": "اطرح سؤالاً…",
-    "emptyState": "اسأل أي شيء عن واجبك"
+    "emptyState": "اسأل أي شيء عن واجبك",
+    "suggestions": {
+      "hintLabel": "أعطني تلميحاً",
+      "hintPrompt": "هل يمكنك إعطائي تلميحاً دون كشف الإجابة الكاملة؟",
+      "stepsLabel": "خطوة بخطوة",
+      "stepsPrompt": "هل يمكنك شرح هذا خطوة بخطوة؟",
+      "simpleLabel": "شرح مبسّط",
+      "simplePrompt": "هل يمكنك شرح الفكرة الرئيسية بعبارات بسيطة؟",
+      "firstLabel": "الخطوة الأولى؟",
+      "firstPrompt": "ما الخطوة الأولى التي يجب أن أبدأ بها لحل هذا؟"
+    }
   },
   "quiz": {
     "title": "الاختبارات",

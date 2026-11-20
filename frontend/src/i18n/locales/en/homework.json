@@ -1,24 +1,42 @@
 {
   "title": "Homework",
+  "subtitle": "Scan a page for step-by-step help and practice quizzes",
   "status": {
-    "ready": "✓ Ready",
+    "ready": "Ready",
     "analyzing": "Analyzing…",
-    "failed": "✕ Failed"
+    "failed": "Failed"
   },
   "session": {
     "defaultTitle": "Homework Session",
-    "quizDone": "Quiz done ✓",
+    "quizDone": "Quiz done",
     "reviewTitle": "Review photo",
+    "viewPhoto": "View full photo",
+    "solution": "Solution",
+    "copied": "Copied",
     "notFound": "Session not found",
     "assistTitle": "Assist",
-    "noExplanation": "No explanation available."
+    "noExplanation": "No explanation available.",
+    "visualGuide": "Visual Guide",
+    "cycle": "CYCLE",
+    "vennBoth": "Both",
+    "vennCommon": "In Common",
+    "callouts": {
+      "idea": "Big Idea",
+      "tip": "Helpful Tip",
+      "watchout": "Watch Out!",
+      "check": "Check Your Work",
+      "example": "Example"
+    }
   },
   "actions": {
     "scanNew": "Scan New Homework",
     "scanNewDesc": "Photograph a page and get AI explanations",
+    "scansRemaining": "{{remaining}}/{{limit}} daily scans left",
+    "unlimitedScans": "Unlimited developer scans",
     "retake": "Retake",
     "analyze": "Analyze",
-    "library": "Library"
+    "library": "Library",
+    "takePhoto": "Take Photo"
   },
   "filters": {
     "all": "All"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "Ask AI",
+    "askShort": "Ask AI",
     "subtitle": "Ask anything about your homework",
     "placeholder": "Ask a question…",
-    "emptyState": "Ask anything about your homework"
+    "emptyState": "Ask anything about your homework",
+    "suggestions": {
+      "hintLabel": "Give me a hint",
+      "hintPrompt": "Can you give me a hint without giving away the full answer?",
+      "stepsLabel": "Step-by-step",
+      "stepsPrompt": "Can you explain this step by step?",
+      "simpleLabel": "Explain simply",
+      "simplePrompt": "Can you explain the main idea in simple terms?",
+      "firstLabel": "First step?",
+      "firstPrompt": "What should be my first step to solve this?"
+    }
   },
   "quiz": {
     "title": "Quizzes",

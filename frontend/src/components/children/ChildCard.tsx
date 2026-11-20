@@ -89,7 +89,7 @@ export function ChildCard({ displayName, grade, avatarUrl, onRemove, onPress }: 
             backgroundColor: colors.bg,
           }}
         >
-          <AvatarIcon avatarId={avatarUrl} size={36} />
+          <AvatarIcon avatarId={avatarUrl} size={50} />
         </View>
 
         {/* Name + badges */}

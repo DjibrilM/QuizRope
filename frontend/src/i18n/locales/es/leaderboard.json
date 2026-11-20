@@ -6,5 +6,12 @@
   "gamesPlayed_one": "{{count}} juego jugado",
   "gamesPlayed_other": "{{count}} juegos jugados",
   "correct": "Correcto",
-  "accuracy": "Precisión"
+  "accuracy": "Precisión",
+  "yourProfile": "Tu perfil",
+  "tapForStats": "Toca para ver tus estadísticas completas",
+  "recentMatches": "Partidas recientes",
+  "bySubject": "Por materia",
+  "noMatchesYet": "Aún no hay partidas jugadas",
+  "noSubjectDataYet": "Sin datos por materia aún",
+  "scoreRatio": "Puntuación: {{score}} / {{max}}"
 }

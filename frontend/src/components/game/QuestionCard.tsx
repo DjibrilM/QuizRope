@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo } from "react";
+import { Linking, ScrollView, StyleSheet, View } from "react-native";
 import { EnrichedMarkdownText } from "react-native-enriched-markdown";
-import { View, Text, Linking } from "react-native";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { useTranslation } from "react-i18next";
 import { AnimatedOption } from "./AnimatedOption";
-import { FONTS } from "../../constants/theme";
+import { formatMathMarkdown } from "../common/MathMarkdown";
+import { UI_COLORS } from "../../constants/theme";
 
 interface QuestionCardProps {
   question: {
@@ -32,25 +32,6 @@ interface QuestionCardProps {
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
-/**
- * 🔥 Fix dim math by forcing LaTeX color
- */
-const brightenMath = (text: string) => {
-  if (!text) return text;
-
-  return (
-    text
-      // block math $$...$$ (handle first to avoid conflicts)
-      .replace(/\$\$(.*?)\$\$/gs, (_, expr) => {
-        return `$$\\color{#fab143}{${expr}}$$`;
-      })
-      // inline math $...$
-      .replace(/\$(.*?)\$/g, (_, expr) => {
-        return `$\\color{#fab143}{${expr}}$`;
-      })
-  );
-};
-
 export function QuestionCard({
   question,
   selectedAnswer,
@@ -61,20 +42,19 @@ export function QuestionCard({
   teamColor,
   compact = false,
 }: QuestionCardProps) {
-  const { t } = useTranslation("common");
-
-  const questionScale = useSharedValue(0.95);
+  void teamSide;
+  const questionScale = useSharedValue(0.97);
   const questionOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!question) return;
 
-    questionScale.value = 0.95;
+    questionScale.value = 0.97;
     questionOpacity.value = 0;
 
-    questionScale.value = withSpring(1, { damping: 30, stiffness: 600 });
-    questionOpacity.value = withSpring(1, { damping: 30, stiffness: 600 });
-  }, [question?.id]);
+    questionScale.value = withSpring(1, { damping: 24, stiffness: 420 });
+    questionOpacity.value = withSpring(1, { damping: 24, stiffness: 420 });
+  }, [question?.id, question, questionOpacity, questionScale]);
 
   const questionAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: questionScale.value }],
@@ -82,8 +62,8 @@ export function QuestionCard({
   }));
 
   const processedMarkdown = useMemo(() => {
-    return question ? brightenMath(question.text) : "";
-  }, [question?.text]);
+    return question ? formatMathMarkdown(question.text, "#FFFFFF") : "";
+  }, [question?.text, question]);
 
   if (!question) return null;
 
@@ -109,157 +89,120 @@ export function QuestionCard({
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "rgba(255, 255, 255, 0.02)",
-        borderRadius: 24,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.05)",
-      }}
-    >
-      {/* Question */}
-      <Animated.View
-        style={[
-          questionAnimatedStyle,
-          {
-            paddingHorizontal: compact ? 12 : 20,
-            paddingTop: compact ? 12 : 20,
-            paddingBottom: compact ? 8 : 12,
-          },
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      {/* Central question stem */}
+      <ScrollView
+        style={styles.promptScroll}
+        contentContainerStyle={[
+          styles.promptContent,
+          compact ? styles.promptContentCompact : styles.promptContentSolo,
         ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <Text
-          style={{
-            color: "rgba(255,255,255,0.4)",
-            fontSize: compact ? 9 : 11,
-            fontFamily: FONTS.bodyExtraBold,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            marginBottom: compact ? 4 : 8,
-          }}
-        >
-          {teamSide === "LEFT" ? t("teams.redTeam") : t("teams.blueTeam")}
-        </Text>
-
-        <View
-          style={{
-            width: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <Animated.View style={[questionAnimatedStyle, styles.promptInner]}>
           <EnrichedMarkdownText
             flavor="github"
             markdown={processedMarkdown}
             onLinkPress={({ url }) => Linking.openURL(url)}
             markdownStyle={{
-              // Base text
-
               paragraph: {
-                color: "#D1D5DB",
-                marginBottom: 10,
+                color: UI_COLORS.textPrimary,
+                fontSize: compact ? 15 : 19,
+                lineHeight: compact ? 21 : 27,
+                marginBottom: 8,
                 textAlign: "center",
               },
-
-              // Headings
               h1: {
-                fontSize: 24,
+                fontSize: compact ? 18 : 24,
                 fontWeight: "700",
                 color: "#FFFFFF",
                 marginBottom: 8,
-                marginTop: 16,
+                marginTop: 8,
                 textAlign: "center",
               },
               h2: {
-                fontSize: 20,
+                fontSize: compact ? 16 : 21,
                 fontWeight: "700",
-                color: "#F3F4F6",
+                color: "#F9FAFB",
                 marginBottom: 6,
-                marginTop: 14,
+                marginTop: 8,
                 textAlign: "center",
               },
               h3: {
-                fontSize: 18,
+                fontSize: compact ? 15 : 18,
                 fontWeight: "600",
-                color: "#E5E7EB",
+                color: "#F3F4F6",
                 marginBottom: 4,
-                marginTop: 12,
+                marginTop: 6,
                 textAlign: "center",
               },
-
-              // Links
               link: {
                 color: "#60A5FA",
               },
-
-              // Lists
               list: {
-                marginBottom: 10,
+                marginBottom: 8,
               },
-
-              // Inline code
               code: {
-                backgroundColor: "#1F2937",
+                backgroundColor: UI_COLORS.surfaceElevated,
                 color: "#F9FAFB",
-
                 fontFamily: "Menlo",
-                fontSize: 14,
+                fontSize: compact ? 12 : 14,
               },
-
-              // Code blocks
               codeBlock: {
-                backgroundColor: "#020617",
+                backgroundColor: "#161221",
                 color: "#E2E8F0",
                 padding: 12,
-                borderRadius: 8,
+                borderRadius: 12,
                 fontFamily: "Menlo",
-                fontSize: 14,
+                fontSize: compact ? 12 : 14,
               },
-
-              // Blockquote
               blockquote: {
-                color: "#9CA3AF",
+                color: UI_COLORS.textSecondary,
               },
-
-              // Tables
               table: {
-                borderColor: "#374151",
+                borderColor: "#261F36",
                 borderRadius: 8,
+              },
+              math: {
+                color: "#FFFFFF",
+                backgroundColor: "transparent",
+                textAlign: "center" as const,
+              },
+              inlineMath: {
+                color: "#FFFFFF",
               },
             }}
           />
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </ScrollView>
 
-      {/* Options */}
+      {/* Answer Options */}
       <View
-        style={{
-          paddingHorizontal: compact ? 12 : 20,
-          paddingBottom: compact ? 12 : 20,
-          gap: compact ? 8 : 12,
-          flexDirection: "row",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-        }}
+        style={[
+          styles.optionsContainer,
+          compact ? styles.optionsGridCompact : styles.optionsStackSolo,
+        ]}
       >
         {question.options.map((option, i) => {
-          const isLong = option.length > 25 || question.options.length <= 2;
+          const isLongCompact =
+            option.length > 22 || question.options.length <= 2;
 
           return (
             <View
               key={i}
-              style={{
-                width: isLong ? "100%" : "48%",
-              }}
+              style={
+                compact
+                  ? { width: isLongCompact ? "100%" : "48.5%" }
+                  : styles.optionSlotFull
+              }
             >
               <AnimatedOption
-                label={OPTION_LABELS[i]}
+                label={OPTION_LABELS[i] ?? String(i + 1)}
                 optionText={option}
                 index={i}
                 questionId={question.id}
-                staggerDelay={i * 15}
+                staggerDelay={i * 20}
                 variant={getVariant(i)}
                 teamColor={teamColor}
                 disabled={selectedAnswer !== null}
@@ -273,3 +216,57 @@ export function QuestionCard({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 500,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  containerCompact: {
+    maxWidth: undefined,
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+  },
+  promptScroll: {
+    flex: 1,
+  },
+  promptContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  promptContentSolo: {
+    paddingHorizontal: 6,
+    paddingVertical: 14,
+  },
+  promptContentCompact: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  promptInner: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  optionsContainer: {
+    width: "100%",
+  },
+  optionsStackSolo: {
+    gap: 10,
+    paddingTop: 8,
+  },
+  optionsGridCompact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingTop: 6,
+  },
+  optionSlotFull: {
+    width: "100%",
+  },
+});

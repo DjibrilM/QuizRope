@@ -31,7 +31,42 @@
     "playAgain": "Jogar Novamente",
     "backToHome": "Voltar ao Inicio",
     "wellDone": "Muito bem!",
-    "finalScore": "Pontuação final: {{score}}"
+    "keepPracticing": "Continue praticando!",
+    "finalScore": "Pontuação final: {{score}}",
+    "reviewAnswers": "Revisar respostas"
+  },
+  "buddy": {
+    "streak3": "Mandando bem! 3 seguidas!",
+    "streak5": "Imparável!",
+    "fast": "Rápido demais!",
+    "timeout": "Tempo esgotado! Foco na próxima!",
+    "streakLost": "Sequência perdida — bora recomeçar!",
+    "wrong1": "Quase! Você consegue na próxima!",
+    "wrongStreak": "Respire fundo e leia cada opção com calma!",
+    "recovery": "De volta ao jogo! Boa recuperação!"
+  },
+  "correction": {
+    "title": "Revisão completa",
+    "question": "Pergunta {{number}}",
+    "summary": "{{correct}} / {{total}} corretas",
+    "questionsCount": "{{count}} perguntas",
+    "missed": "Erradas",
+    "questionMap": "Mapa das perguntas",
+    "avgSpeed": "Méd. {{time}}s",
+    "filterAll": "Todas",
+    "filterMissed": "Erradas",
+    "filterCorrect": "Certas",
+    "statusCorrect": "Certa",
+    "statusWrong": "Errada",
+    "statusSkipped": "Tempo esgotado",
+    "perfectFilterTitle": "Gabaritou!",
+    "perfectFilterSubtitle": "Você acertou tudo — nenhum erro para revisar.",
+    "noCorrectFilterSubtitle": "Nenhum acerto registrado nesta partida.",
+    "showAll": "Mostrar todas",
+    "explanation": "Explicação",
+    "skipped": "Tempo esgotado — sem resposta",
+    "empty": "Nenhuma resposta para revisar",
+    "done": "Concluir"
   },
   "scoreboard": {
     "score": "Pontuação"

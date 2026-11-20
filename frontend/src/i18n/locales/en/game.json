@@ -31,16 +31,42 @@
     "playAgain": "Play Again",
     "backToHome": "Back to Home",
     "wellDone": "Well Done!",
+    "keepPracticing": "Keep Practicing!",
     "finalScore": "Final Score: {{score}}",
     "reviewAnswers": "Review Answers"
   },
+  "buddy": {
+    "streak3": "On fire! 3 in a row!",
+    "streak5": "Unstoppable!",
+    "fast": "Lightning fast!",
+    "timeout": "Too slow! Stay sharp next round!",
+    "streakLost": "Streak lost — shake it off!",
+    "wrong1": "Not quite — you've got the next one!",
+    "wrongStreak": "Take a breath — read each option carefully!",
+    "recovery": "Back on track! Nice recovery!"
+  },
   "correction": {
-    "title": "Correction",
+    "title": "Full Review",
     "question": "Question {{number}}",
     "summary": "{{correct}} / {{total}} correct",
+    "questionsCount": "{{count}} questions",
+    "missed": "Missed",
+    "questionMap": "Question Map",
+    "avgSpeed": "Avg {{time}}s",
+    "filterAll": "All",
+    "filterMissed": "Missed",
+    "filterCorrect": "Correct",
+    "statusCorrect": "Correct",
+    "statusWrong": "Wrong",
+    "statusSkipped": "Time Out",
+    "perfectFilterTitle": "Clean sweep!",
+    "perfectFilterSubtitle": "You got every question right — nothing missed to review.",
+    "noCorrectFilterSubtitle": "No correct answers recorded on this run.",
+    "showAll": "Show All Questions",
     "explanation": "Explanation",
     "skipped": "Time ran out — no answer given",
-    "empty": "No answers to review"
+    "empty": "No answers to review",
+    "done": "Done"
   },
   "scoreboard": {
     "score": "Score"

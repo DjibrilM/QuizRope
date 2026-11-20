@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "Solo - {{subject}}",
+    "setupTitle": "Configure ta partie",
+    "setupSubtitle": "Choisis la difficulté, les manches et ton thème",
     "startButton": "Commencer",
     "contextLabel": "Personnalise ta pratique",
     "contextPlaceholder": "ex. racines carrées, fractions avec dénominateurs jusqu'à 20…",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "Écran partagé · {{subject}}",
+    "setupTitle": "Préparer le duel",
     "subtitle": "Deux joueurs · Même appareil",
     "ageGroupLabel": "Groupe d'âge",
     "playersLabel": "Joueurs",

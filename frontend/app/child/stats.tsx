@@ -532,7 +532,7 @@ export default function ChildStatsScreen() {
                   backgroundColor: FORTNITE_COLORS.glowPurple + "15",
                 }}
               >
-                <AvatarIcon avatarId={avatarUrl as string} size={48} />
+                <AvatarIcon avatarId={avatarUrl as string} size={64} />
               </View>
               <Text
                 style={{

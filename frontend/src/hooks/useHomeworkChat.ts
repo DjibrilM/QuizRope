@@ -201,7 +201,7 @@ export function useHomeworkChat(sessionId: string, guestContext?: string) {
     return () => {
       socket.disconnect();
     };
-  }, [sessionId]);
+  }, [sessionId, isGuest]);
 
   const send = (text: string) => {
     if (!text.trim() || streaming) return;

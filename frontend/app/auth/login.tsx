@@ -1,57 +1,41 @@
+import React, { useRef, useState } from "react";
 import {
-  View,
+  ImageBackground,
+  StyleSheet,
   Text,
-  ScrollView,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useState } from "react";
-import Svg, { Path, Line } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
+import { router, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { apiService } from "../../src/services/api";
 import { firebaseAuthService } from "../../src/services/firebase";
 import { useGameStore } from "../../src/stores/gameStore";
-import { AppTitle, LoginButton } from "../../src/components/auth";
-import {
-  ScreenHeader,
-  Divider,
-  AnimatedLoader,
-  Button,
-} from "../../src/components/common";
-import { FONTS } from "../../src/constants/theme";
-import { useToast } from "../../src/context/ToastContext";
 import { NotificationService } from "../../src/services/NotificationService";
+import { useToast } from "../../src/context/ToastContext";
+import { TermsSheet } from "../../src/components/common";
+import { LoginButton } from "../../src/components/auth";
+import type { FloatingBottomSheetRef } from "../../src/components/ui";
+import { FONTS, UI_COLORS } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
+
+const LOGIN_BG = require("../../assets/login-bg.jpg");
 
 export default function LoginScreen() {
   const { t } = useTranslation(["auth", "common"]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { setAuth } = useGameStore();
-  const { showError, showApiError } = useToast();
+  const termsSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const { setAuth, locale } = useGameStore();
+  const { showApiError } = useToast();
   usePortrait();
 
-  const validate = (): boolean => {
-    if (!email.trim()) {
-      showError(t("auth:validation.emailRequired"), "Validation");
-      return false;
-    }
-    if (!password) {
-      showError(t("auth:validation.passwordRequired"), "Validation");
-      return false;
-    }
-    if (password.length < 6) {
-      showError(t("auth:validation.passwordMinLength"), "Validation");
-      return false;
-    }
-    return true;
-  };
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   const handleLogin = async (idToken: string) => {
     const result = await apiService.login(idToken);
@@ -63,50 +47,15 @@ export default function LoginScreen() {
       result.token,
     );
 
-    // Subscription disabled — app is free for now
-
     NotificationService.sendSignInNotification(result.user.displayName);
     router.replace("/home");
-  };
-
-  const handleEmailSignIn = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      const { idToken } = await firebaseAuthService.signInWithEmail(
-        email.trim(),
-        password,
-      );
-      if (!firebaseAuthService.isEmailVerified()) {
-        await firebaseAuthService.sendEmailVerification();
-        router.replace({
-          pathname: "/auth/verify-email" as any,
-          params: { email: email.trim() },
-        });
-        return;
-      }
-      await handleLogin(idToken);
-    } catch (err: any) {
-      if (err?.message === "email_not_verified") {
-        router.replace({
-          pathname: "/auth/verify-email" as any,
-          params: { email: email.trim() },
-        });
-        return;
-      }
-      showApiError(err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
       if (!firebaseAuthService.isGoogleConfigured()) {
-        throw new Error(
-          "Google Sign-In is not configured. Please sign in with email and password.",
-        );
+        throw new Error("Google Sign-In is not configured for this build.");
       }
       const { idToken } = await firebaseAuthService.signInWithGoogle();
       await handleLogin(idToken);
@@ -117,186 +66,149 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgotPassword = () => {
-    router.push("/auth/forgot-password" as any);
-  };
-
   return (
-    <SafeAreaView className="flex-1 bg-game-bg">
-      <ScreenHeader title={t("auth:login.signIn")} />
+    <View style={styles.root}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+          title: "",
+          headerBackVisible: true,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: UI_COLORS.textPrimary,
+        }}
+      />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            paddingHorizontal: 12,
-            paddingVertical: 40,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View className="w-full max-w-sm">
-            <TextInput
-              value={email}
-              onChangeText={(v) => {
-                setEmail(v);
-              }}
-              placeholder={t("auth:login.emailPlaceholder")}
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.04)",
-                color: "#FFFFFF",
-                fontSize: 16,
-                fontFamily: FONTS.body,
-                paddingHorizontal: 20,
-                paddingVertical: 16,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.08)",
-                marginBottom: 12,
-              }}
-            />
+      {/* Full-bleed angled card collage background — no blur filter */}
+      <ImageBackground
+        source={LOGIN_BG}
+        resizeMode="cover"
+        style={StyleSheet.absoluteFill}
+      />
 
-            <View style={{ position: "relative", marginBottom: 4 }}>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder={t("auth:login.passwordPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry={!showPassword}
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.04)",
-                  color: "#FFFFFF",
-                  fontSize: 16,
-                  fontFamily: FONTS.body,
-                  paddingHorizontal: 20,
-                  paddingVertical: 16,
-                  paddingRight: 52,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: "rgba(255, 255, 255, 0.08)",
-                }}
-              />
-              <Pressable
-                onPress={() => setShowPassword((v) => !v)}
-                style={{
-                  position: "absolute",
-                  right: 16,
-                  top: 0,
-                  bottom: 0,
-                  justifyContent: "center",
-                }}
-                hitSlop={8}
-              >
-                {showPassword ? (
-                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M10.73 10.73a3 3 0 104.54 4.54"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                    />
-                    <Line
-                      x1="1"
-                      y1="1"
-                      x2="23"
-                      y2="23"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                    />
-                  </Svg>
-                ) : (
-                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M12 9a3 3 0 100 6 3 3 0 000-6z"
-                      stroke="#7B6B8A"
-                      strokeWidth={1.8}
-                    />
-                  </Svg>
-                )}
-              </Pressable>
-            </View>
+      {/* Cinematic dark vignette overlay across the collage + fade into CTA stage */}
+      <LinearGradient
+        colors={[
+          "rgba(13, 11, 20, 0.54)",
+          "rgba(13, 11, 20, 0.38)",
+          "rgba(13, 11, 20, 0.86)",
+          "rgba(13, 11, 20, 0.99)",
+        ]}
+        locations={[0, 0.34, 0.62, 0.84]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
 
-            <Pressable onPress={handleForgotPassword} className="self-end my-5">
-              <Text
-                style={{
-                  color: "#A78BFA",
-                  fontSize: 12,
-                  fontFamily: FONTS.body,
-                }}
-              >
-                {t("auth:login.forgotPassword")}
+      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <View style={styles.stage}>
+          <View style={styles.actionWrap}>
+            <View style={styles.parentPromptWrap}>
+              <Text style={[styles.parentTitle, { fontFamily: headingFont }]}>
+                {t("auth:login.continueAsParent", "Continue as parent")}
               </Text>
-            </Pressable>
-
-            <Button
-              loading={loading}
-              label={t("auth:login.signIn")}
-              variant="primary"
-              className="bg-game-indigo! w-full mb-2"
-              onPress={handleEmailSignIn}
-            />
-
-            <Divider />
-
-            <View className="items-center">
-              <LoginButton
-                onPress={handleGoogleSignIn}
-                loading={loading}
-                label={t("auth:login.continueWithGoogle")}
-                variant="google"
-              />
+              <Text style={styles.parentDescription}>
+                {t(
+                  "auth:login.parentDescription",
+                  "Sign in with your Google account to manage kid profiles and track progress.",
+                )}
+              </Text>
             </View>
-          </View>
 
-          <View className="mt-6 flex-row items-center">
-            <Text
-              style={{ color: "#7B6B8A", fontSize: 14, fontFamily: FONTS.body }}
-            >
-              {t("auth:login.noAccount")}{" "}
-            </Text>
-            <Text
-              style={{
-                color: "#9B59B6",
-                fontSize: 14,
-                fontFamily: FONTS.bodyBold,
-              }}
-              onPress={() => router.push("/auth/signup" as any)}
-            >
-              {t("auth:login.signUpLink")}
-            </Text>
+            <LoginButton
+              onPress={handleGoogleSignIn}
+              loading={loading}
+              label={t("auth:login.continueWithGoogle", "Continue with Google")}
+            />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+
+        {/* Grounded Legal Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            onPress={() => termsSheetRef.current?.present()}
+            activeOpacity={0.75}
+            style={styles.legalButton}
+            accessibilityRole="button"
+          >
+            <Text style={styles.legalText}>
+              {t("auth:roleSelect.legalText")}{" "}
+              <Text style={styles.legalLink}>{t("auth:roleSelect.terms")}</Text>{" "}
+              &{" "}
+              <Text style={styles.legalLink}>
+                {t("auth:roleSelect.privacy")}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      <TermsSheet ref={termsSheetRef} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  safeArea: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  stage: {
+    flex: 1,
+    justifyContent: "flex-end",
+    paddingHorizontal: 22,
+    paddingBottom: 20,
+    width: "100%",
+    maxWidth: 460,
+    alignSelf: "center",
+  },
+  actionWrap: {
+    width: "100%",
+  },
+  parentPromptWrap: {
+    alignItems: "center",
+    marginBottom: 32,
+    paddingHorizontal: 10,
+  },
+  parentTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    paddingTop: 2,
+    color: "#FFFFFF",
+    letterSpacing: 0.4,
+    textAlign: "center",
+  },
+  parentDescription: {
+    marginTop: 8,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "rgba(255, 255, 255, 0.74)",
+    textAlign: "center",
+  },
+  footer: {
+    paddingBottom: 10,
+    alignItems: "center",
+  },
+  legalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  legalText: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "rgba(255, 255, 255, 0.65)",
+    textAlign: "center",
+  },
+  legalLink: {
+    fontFamily: FONTS.bodySemiBold,
+    color: "#FFFFFF",
+    textDecorationLine: "underline",
+  },
+});

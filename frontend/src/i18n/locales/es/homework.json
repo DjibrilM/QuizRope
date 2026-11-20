@@ -1,24 +1,42 @@
 {
   "title": "Tareas",
+  "subtitle": "Escanea una página para recibir ayuda paso a paso y cuestionarios",
   "status": {
-    "ready": "✓ Listo",
+    "ready": "Listo",
     "analyzing": "Analizando…",
-    "failed": "✕ Fallido"
+    "failed": "Fallido"
   },
   "session": {
     "defaultTitle": "Sesión de tarea",
-    "quizDone": "Cuestionario completado ✓",
+    "quizDone": "Cuestionario listo",
     "reviewTitle": "Revisar foto",
+    "viewPhoto": "Ver foto completa",
+    "solution": "Solución",
+    "copied": "Copiado",
     "notFound": "Sesión no encontrada",
     "assistTitle": "Asistir",
-    "noExplanation": "No hay explicación disponible."
+    "noExplanation": "No hay explicación disponible.",
+    "visualGuide": "Guía visual",
+    "cycle": "CICLO",
+    "vennBoth": "Ambos",
+    "vennCommon": "En común",
+    "callouts": {
+      "idea": "Idea clave",
+      "tip": "Consejo útil",
+      "watchout": "¡Cuidado!",
+      "check": "Comprueba tu respuesta",
+      "example": "Ejemplo"
+    }
   },
   "actions": {
     "scanNew": "Escanear nueva tarea",
     "scanNewDesc": "Fotografía una página y obtén explicaciones de IA",
+    "scansRemaining": "{{remaining}}/{{limit}} escaneos disponibles hoy",
+    "unlimitedScans": "Escaneos ilimitados (dev)",
     "retake": "Volver a tomar",
     "analyze": "Analizar",
-    "library": "Biblioteca"
+    "library": "Galería",
+    "takePhoto": "Tomar foto"
   },
   "filters": {
     "all": "Todo"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "Preguntar a la IA",
+    "askShort": "Preguntar IA",
     "subtitle": "Pregunta cualquier cosa sobre tu tarea",
     "placeholder": "Haz una pregunta…",
-    "emptyState": "Pregunta cualquier cosa sobre tu tarea"
+    "emptyState": "Pregunta cualquier cosa sobre tu tarea",
+    "suggestions": {
+      "hintLabel": "Dame una pista",
+      "hintPrompt": "¿Puedes darme una pista sin decirme toda la respuesta?",
+      "stepsLabel": "Paso a paso",
+      "stepsPrompt": "¿Puedes explicar esto paso a paso?",
+      "simpleLabel": "Explicar simple",
+      "simplePrompt": "¿Puedes explicar la idea principal con palabras sencillas?",
+      "firstLabel": "¿Primer paso?",
+      "firstPrompt": "¿Cuál debería ser mi primer paso para resolver esto?"
+    }
   },
   "quiz": {
     "title": "Cuestionarios",

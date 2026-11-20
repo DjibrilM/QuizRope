@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,21 +25,9 @@ export function ScreenHeader({
         options={{
           headerShown: true,
           title,
-          ...(showBack && {
-            headerLeft: () => (
-              <Pressable
-                onPress={() => router.back()}
-                style={({ pressed }) => ({
-                  padding: 4,
-                  opacity: pressed ? 0.6 : 1,
-                })}
-                accessibilityRole="button"
-                accessibilityLabel={t("accessibility.goBack")}
-              >
-                <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
-              </Pressable>
-            ),
-          }),
+          headerBackVisible: showBack,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: "#FFFFFF",
           ...(rightElement && { headerRight: () => rightElement }),
         }}
       />
@@ -59,23 +47,21 @@ export function ScreenHeader({
     >
       <View style={{ width: 48, alignItems: "flex-start" }}>
         {showBack && (
-          <Pressable
+          <TouchableOpacity
             onPress={() => router.back()}
-            style={({ pressed }) => ({
+            activeOpacity={0.75}
+            style={{
               width: 40,
               height: 40,
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 20,
-              backgroundColor: pressed
-                ? "rgba(255,255,255,0.08)"
-                : "transparent",
-            })}
+            }}
             accessibilityRole="button"
             accessibilityLabel={t("accessibility.goBack")}
           >
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </Pressable>
+          </TouchableOpacity>
         )}
       </View>
 

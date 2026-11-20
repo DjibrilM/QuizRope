@@ -1,27 +1,42 @@
-import Svg, { Defs, LinearGradient, Stop, Path } from "react-native-svg";
+import React from "react";
+import Svg, { Circle, Path } from "react-native-svg";
 
-function StudentIcon() {
+interface IconProps {
+  size?: number;
+  selected?: boolean;
+}
+
+/**
+ * Rounded duotone scholar cap with golden tassel for young learners.
+ */
+function StudentIcon({ size = 28, selected = false }: IconProps) {
+  const capTop = selected ? "#FFFFFF" : "#6EE7B7";
+  const capBase = selected ? "rgba(255, 255, 255, 0.78)" : "#10B981";
+  const tasselGold = "#FCD34D";
+
   return (
-    <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="studentGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#A78BFA" />
-          <Stop offset="1" stopColor="#7C3AED" />
-        </LinearGradient>
-      </Defs>
-      {/* Academy Hat / Crown Base */}
-      <Path d="M2 9l10-5 10 5-10 5-10-5z" fill="url(#studentGrad)" />
+    <Svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      {/* Lower rounded cap crown */}
       <Path
-        d="M6 12v4c0 1.5 2.5 3 6 3s6-1.5 6-3v-4"
-        stroke="url(#studentGrad)"
-        strokeWidth={2.5}
-        strokeLinejoin="round"
+        d="M7.5 14.8v4.1c0 1.9 2.9 3.5 6.5 3.5s6.5-1.6 6.5-3.5v-4.1l-5.7 2.75a1.85 1.85 0 0 1-1.6 0L7.5 14.8Z"
+        fill={capBase}
       />
-      {/* Golden Star Sparkle */}
+
+      {/* Rounded mortarboard */}
       <Path
-        d="M12 14l1.2 2.4 2.6.4-1.9 1.8.4 2.6-2.3-1.2-2.3 1.2.4-2.6-1.9-1.8 2.6-.4L12 14z"
-        fill="#FFD93D"
+        d="M13.22 5.45c.49-.24 1.07-.24 1.56 0l9.32 4.48c.68.33.68 1.31 0 1.64l-9.32 4.48c-.49.24-1.07.24-1.56 0L3.9 11.57c-.68-.33-.68-1.31 0-1.64l9.32-4.48Z"
+        fill={capTop}
       />
+
+      {/* Tassel cord & bobble */}
+      <Path
+        d="M22.2 11.6v4.6"
+        stroke={tasselGold}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <Circle cx="22.2" cy="17.6" r="1.5" fill={tasselGold} />
+      <Circle cx="14" cy="10.75" r="1.25" fill={tasselGold} />
     </Svg>
   );
 }

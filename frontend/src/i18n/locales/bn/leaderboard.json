@@ -6,5 +6,12 @@
   "gamesPlayed_one": "{{count}} টি খেলা খেলা হয়েছে",
   "gamesPlayed_other": "{{count}} টি খেলা খেলা হয়েছে",
   "correct": "সঠিক",
-  "accuracy": "নির্ভুলতা"
+  "accuracy": "নির্ভুলতা",
+  "yourProfile": "তোমার প্রোফাইল",
+  "tapForStats": "সম্পূর্ণ পরিসংখ্যান দেখতে ট্যাপ করো",
+  "recentMatches": "সাম্প্রতিক ম্যাচ",
+  "bySubject": "বিষয় অনুযায়ী",
+  "noMatchesYet": "এখনো কোনো ম্যাচ খেলা হয়নি",
+  "noSubjectDataYet": "এখনো কোনো বিষয়ের তথ্য নেই",
+  "scoreRatio": "স্কোর: {{score}} / {{max}}"
 }

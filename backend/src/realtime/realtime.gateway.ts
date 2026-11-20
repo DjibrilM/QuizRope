@@ -11,8 +11,17 @@ import {
 import { Logger, Inject, forwardRef } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 import { ChildrenService } from "../children/children.service";
-import { HomeworkService } from "../homework/homework.service";
+import {
+  HomeworkService,
+  buildHomeworkChatSystemInstruction,
+  extractStreamChunkText,
+} from "../homework/homework.service";
 import { GEMINI_MODEL } from "../constants";
 
 @WebSocketGateway({
@@ -122,7 +131,9 @@ export class RealtimeGateway
   emitChildDeleted(sessionToken: string, childId: string) {
     const room = `session:${sessionToken}`;
     this.server.to(room).emit("child:deleted", { childId });
-    this.logger.log(`Child ${childId} deleted, notified session ${sessionToken}`);
+    this.logger.log(
+      `Child ${childId} deleted, notified session ${sessionToken}`,
+    );
   }
 
   // ─── Homework chat ───────────────────────────────────────────────────────────
@@ -141,24 +152,30 @@ export class RealtimeGateway
   @SubscribeMessage("homework:chat")
   async handleHomeworkChat(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { sessionId: string; message: string; language?: string },
+    @MessageBody()
+    data: { sessionId: string; message: string; language?: string },
   ) {
     const { sessionId, message, language } = data;
 
-    this.logger.log(`[Gemini] homework:chat start session=${sessionId} client=${client.id} msgLen=${message.length}`);
+    this.logger.log(
+      `[Gemini] homework:chat start session=${sessionId} client=${client.id} msgLen=${message.length}`,
+    );
 
     const controller = new AbortController();
     this.activeStreams.set(client.id, controller);
 
     try {
-      const session = await this.homeworkService.getSessionRaw(sessionId);
-      const history = await this.homeworkService.fetchChatHistory(sessionId);
-
-      await this.homeworkService.saveMessage(sessionId, "user", message);
+      const [session, history] = await Promise.all([
+        this.homeworkService.getSessionRaw(sessionId),
+        this.homeworkService.fetchChatHistory(sessionId),
+        this.homeworkService.saveMessage(sessionId, "user", message),
+      ]);
 
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        this.logger.error(`[Gemini] homework:chat aborted — GEMINI_API_KEY not configured session=${sessionId}`);
+        this.logger.error(
+          `[Gemini] homework:chat aborted — GEMINI_API_KEY not configured session=${sessionId}`,
+        );
         client.emit("homework:error", "AI not configured");
         return;
       }
@@ -166,25 +183,22 @@ export class RealtimeGateway
       const model = new ChatGoogleGenerativeAI({
         model: GEMINI_MODEL,
         apiKey,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2560,
         temperature: 0.7,
+        thinkingConfig: { thinkingBudget: 0 },
       });
 
-      let systemInstruction = `You are an encouraging K-12 tutor assistant in QuizRope — an educational tug-of-war quiz app for children.
-Your ONLY job is to help the student understand their homework.
-Subject: ${session.subject || "General"}.
-Homework content for context:
-${session.answersMarkdown || ""}
+      const rawContext = session.answersMarkdown || "";
+      const sessionContext =
+        rawContext.length > 3000
+          ? rawContext.slice(0, 3000) + "\n...[truncated]"
+          : rawContext;
 
-STRICT RULES — follow all of these without exception:
-1. ONLY discuss the student's homework and related school subjects. If asked about anything unrelated, politely decline and redirect to the homework.
-2. NEVER simply give the final answer — always guide, explain, and scaffold so the student actually learns.
-3. NEVER discuss violence, adult content, personal information, politics, religion, or anything inappropriate for children.
-4. NEVER impersonate other people, claim to be human, or role-play as a different AI system.
-5. Keep all language simple, encouraging, and age-appropriate for K-12 students.
-6. If a student mentions personal distress or safety concerns, respond with care and encourage them to talk to a trusted adult.
-Write LONG, thorough, step-by-step educational explanations. Break down fundamental concepts so the child actually learns.
-7. Always respond in the language identified by this BCP-47 code: ${language || "en"}.`;
+      let systemInstruction = buildHomeworkChatSystemInstruction({
+        sessionContext,
+        subject: session.subject || "General",
+        language,
+      });
 
       if (session.chatSummary) {
         systemInstruction += `\n\nHere is a summary of the conversation so far, for context:\n${session.chatSummary}`;
@@ -192,13 +206,13 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
 
       // Only pass unsummarized history exactly to prevent redundant token usage
       const unsummarizedStartIndex = session.summarizedMessageCount || 0;
-      const conversationMessages = history.slice(unsummarizedStartIndex).map((m) => ({
-        role: m.role === "user" ? ("human" as const) : ("ai" as const),
-        content: m.content,
-      }));
+      const conversationMessages = history
+        .slice(unsummarizedStartIndex)
+        .map((m) => ({
+          role: m.role === "user" ? ("human" as const) : ("ai" as const),
+          content: m.content,
+        }));
 
-      const { HumanMessage, AIMessage, SystemMessage } =
-        await import("@langchain/core/messages");
       const msgs = [
         new SystemMessage(systemInstruction),
         ...conversationMessages.map((m) =>
@@ -211,7 +225,9 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
 
       let fullResponse = "";
 
-      this.logger.log(`[Gemini] homework:chat streaming session=${sessionId} model=${GEMINI_MODEL} historyLen=${history.length}`);
+      this.logger.log(
+        `[Gemini] homework:chat streaming session=${sessionId} model=${GEMINI_MODEL} historyLen=${history.length}`,
+      );
 
       try {
         const stream = await model.stream(msgs, {
@@ -220,7 +236,7 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
 
         for await (const chunk of stream) {
           if (controller.signal.aborted) break;
-          const token = typeof chunk.content === "string" ? chunk.content : "";
+          const token = extractStreamChunkText(chunk.content);
           if (token) {
             fullResponse += token;
             client.emit("homework:token", token);
@@ -228,10 +244,15 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
         }
       } catch (err: any) {
         if (!controller.signal.aborted) {
-          this.logger.error(`[Gemini] homework:chat stream error session=${sessionId}: ${err.message}`, err.stack);
+          this.logger.error(
+            `[Gemini] homework:chat stream error session=${sessionId}: ${err.message}`,
+            err.stack,
+          );
           throw err;
         }
-        this.logger.log(`[Gemini] homework:chat stream aborted by client session=${sessionId}`);
+        this.logger.log(
+          `[Gemini] homework:chat stream aborted by client session=${sessionId}`,
+        );
       }
 
       // Save whatever was generated (full or partial)
@@ -241,20 +262,32 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
           "ai",
           fullResponse,
         );
-        this.logger.log(`[Gemini] homework:chat done session=${sessionId} responseLen=${fullResponse.length}`);
+        this.logger.log(
+          `[Gemini] homework:chat done session=${sessionId} responseLen=${fullResponse.length}`,
+        );
         client.emit("homework:done", saved);
 
         // Fire and forget the background summarization logic so it doesn't block the connection
-        this.homeworkService.summarizeConversationContext(sessionId).catch((err) => {
-          this.logger.error("Failed to run background context summarization:", err.message);
-        });
-
+        this.homeworkService
+          .summarizeConversationContext(sessionId)
+          .catch((err) => {
+            this.logger.error(
+              "Failed to run background context summarization:",
+              err.message,
+            );
+          });
       } else {
         client.emit("homework:stopped");
       }
     } catch (error: any) {
-      this.logger.error(`\n❌ [Gemini] homework:chat unhandled error session=${sessionId}: ${error.message}`, error.stack);
-      client.emit("homework:error", error.message || "Failed to generate response. Please try again.");
+      this.logger.error(
+        `\n❌ [Gemini] homework:chat unhandled error session=${sessionId}: ${error.message}`,
+        error.stack,
+      );
+      client.emit(
+        "homework:error",
+        error.message || "Failed to generate response. Please try again.",
+      );
     } finally {
       this.activeStreams.delete(client.id);
     }
@@ -310,8 +343,14 @@ Write LONG, thorough, step-by-step educational explanations. Break down fundamen
       ) {
         client.emit("homework:stopped");
       } else {
-        this.logger.error(`\n❌ [Gemini] homework:guest-chat error: ${err.message}`, err.stack);
-        client.emit("homework:error", err.message || "Failed to generate response. Please try again.");
+        this.logger.error(
+          `\n❌ [Gemini] homework:guest-chat error: ${err.message}`,
+          err.stack,
+        );
+        client.emit(
+          "homework:error",
+          err.message || "Failed to generate response. Please try again.",
+        );
       }
     } finally {
       this.activeStreams.delete(client.id);

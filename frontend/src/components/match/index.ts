@@ -1,6 +1,22 @@
 export { SubjectSelector } from "./SubjectSelector";
-export { DifficultySelector } from "./DifficultySelector";
+export {
+  DifficultySelector,
+  type DifficultyOption,
+} from "./DifficultySelector";
 export { RoundsSelector } from "./RoundsSelector";
 export { MatchHistoryCard } from "./MatchHistoryCard";
-export { SubjectIcon } from "./SubjectIcons";
+export {
+  SubjectIcon,
+  IconKids,
+  IconTeens,
+  IconYoungAdults,
+} from "./SubjectIcons";
 export { SubjectCard } from "./SubjectCard";
+export {
+  PracticeContextField,
+  MatchStartDock,
+} from "./MatchSetupShared";
+export {
+  MatchReviewView,
+  type ReviewQuestionItem,
+} from "./MatchReviewView";

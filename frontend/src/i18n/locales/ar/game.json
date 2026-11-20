@@ -31,7 +31,42 @@
     "playAgain": "العب مجدداً",
     "backToHome": "العودة للرئيسية",
     "wellDone": "أحسنت!",
-    "finalScore": "النتيجة النهائية: {{score}}"
+    "keepPracticing": "واصل التدريب!",
+    "finalScore": "النتيجة النهائية: {{score}}",
+    "reviewAnswers": "مراجعة الإجابات"
+  },
+  "buddy": {
+    "streak3": "رائع! 3 إجابات متتالية!",
+    "streak5": "لا يمكن إيقافك!",
+    "fast": "سريع كالبرق!",
+    "timeout": "انتهى الوقت! ركّز في السؤال التالي!",
+    "streakLost": "توقفت السلسلة — لا تستسلم!",
+    "wrong1": "ليست هذه — ستصيب في التالية!",
+    "wrongStreak": "تمهّل واقرأ الخيارات بعناية!",
+    "recovery": "عودة رائعة! استمر!"
+  },
+  "correction": {
+    "title": "المراجعة الكاملة",
+    "question": "السؤال {{number}}",
+    "summary": "{{correct}} / {{total}} صحيح",
+    "questionsCount": "{{count}} أسئلة",
+    "missed": "أخطاء",
+    "questionMap": "خريطة الأسئلة",
+    "avgSpeed": "متوسط {{time}}ث",
+    "filterAll": "الكل",
+    "filterMissed": "الأخطاء",
+    "filterCorrect": "الصحيحة",
+    "statusCorrect": "صحيح",
+    "statusWrong": "خطأ",
+    "statusSkipped": "انتهى الوقت",
+    "perfectFilterTitle": "أداء مثالي!",
+    "perfectFilterSubtitle": "أجبت على جميع الأسئلة بشكل صحيح — لا توجد أخطاء للمراجعة.",
+    "noCorrectFilterSubtitle": "لا توجد إجابات صحيحة في هذه الجولة.",
+    "showAll": "عرض كل الأسئلة",
+    "explanation": "التفسير",
+    "skipped": "انتهى الوقت — لم تُقدّم إجابة",
+    "empty": "لا توجد إجابات للمراجعة",
+    "done": "تم"
   },
   "scoreboard": {
     "score": "النتيجة"

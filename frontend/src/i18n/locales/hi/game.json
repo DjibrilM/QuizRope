@@ -31,7 +31,42 @@
     "playAgain": "फिर से खेलें",
     "backToHome": "होम पर वापस जाएं",
     "wellDone": "शाबाश!",
-    "finalScore": "अंतिम स्कोर: {{score}}"
+    "keepPracticing": "अभ्यास जारी रखें!",
+    "finalScore": "अंतिम स्कोर: {{score}}",
+    "reviewAnswers": "उत्तर देखें"
+  },
+  "buddy": {
+    "streak3": "कमाल! लगातार 3 सही!",
+    "streak5": "लाजवाब रफ़्तार!",
+    "fast": "बिजली जैसी तेज़ी!",
+    "timeout": "समय समाप्त! अगले सवाल पर ध्यान दें!",
+    "streakLost": "स्ट्रीक टूट गई — फिर से शुरुआत करें!",
+    "wrong1": "क़रीब थे — अगला सही होगा!",
+    "wrongStreak": "थोड़ा रुकें और हर विकल्प ध्यान से पढ़ें!",
+    "recovery": "बढ़िया वापसी!"
+  },
+  "correction": {
+    "title": "संपूर्ण समीक्षा",
+    "question": "प्रश्न {{number}}",
+    "summary": "{{correct}} / {{total}} सही",
+    "questionsCount": "{{count}} प्रश्न",
+    "missed": "गलत",
+    "questionMap": "प्रश्न मानचित्र",
+    "avgSpeed": "औसत {{time}}से",
+    "filterAll": "सभी",
+    "filterMissed": "गलत",
+    "filterCorrect": "सही",
+    "statusCorrect": "सही",
+    "statusWrong": "गलत",
+    "statusSkipped": "समय समाप्त",
+    "perfectFilterTitle": "शानदार!",
+    "perfectFilterSubtitle": "सभी उत्तर सही रहे — सुधार के लिए कोई गलती नहीं।",
+    "noCorrectFilterSubtitle": "इस राउंड में कोई सही उत्तर नहीं है।",
+    "showAll": "सभी प्रश्न दिखाएं",
+    "explanation": "व्याख्या",
+    "skipped": "समय समाप्त — कोई उत्तर नहीं दिया गया",
+    "empty": "समीक्षा के लिए कोई उत्तर नहीं",
+    "done": "पूर्ण"
   },
   "scoreboard": {
     "score": "स्कोर"

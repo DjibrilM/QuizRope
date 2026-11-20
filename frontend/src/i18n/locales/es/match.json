@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "Solo - {{subject}}",
+    "setupTitle": "Configura tu partida",
+    "setupSubtitle": "Elige dificultad, rondas y tema opcional",
     "startButton": "Empezar",
     "contextLabel": "Personaliza tu práctica",
     "contextPlaceholder": "ej. raíces cuadradas, fracciones con denominadores hasta 20…",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "Pantalla dividida · {{subject}}",
+    "setupTitle": "Prepara el duelo",
     "subtitle": "Dos jugadores · Mismo dispositivo",
     "ageGroupLabel": "Grupo de edad",
     "playersLabel": "Jugadores",

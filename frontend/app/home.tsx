@@ -1,289 +1,160 @@
-import { View, Text, Pressable, ScrollView } from "react-native";
+import React, { useCallback, useEffect, useRef } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { MatchStatus } from "@shared/types/match.types";
 import { usePortrait } from "../src/hooks/useOrientation";
 import { useGameStore } from "../src/stores/gameStore";
 import { firebaseAuthService } from "../src/services/firebase";
 import * as guestDb from "../src/services/guestDb";
-import { AvatarIcon } from "../src/components/common/AvatarIcons";
 import { apiService } from "../src/services/api";
 import { hapticsService } from "../src/services/haptics";
-import { MatchStatus } from "@shared/types/match.types";
-import Svg, {
-  Path,
-  Circle,
-  Rect,
-  Defs,
-  LinearGradient,
-  Stop,
-} from "react-native-svg";
-import React, { useRef, useCallback, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { AvatarIcon } from "../src/components/common/AvatarIcons";
 import {
-  BottomSheetModal,
-  BottomSheetView,
-  BottomSheetBackdrop,
-} from "@gorhom/bottom-sheet";
-import type { BottomSheetBackdropProps } from "@gorhom/bottom-sheet";
-import { useTranslation } from "react-i18next";
+  HomeChildrenIcon,
+  HomeControllerIcon,
+  HomeHistoryIcon,
+  HomeHomeworkIcon,
+  HomeLeaderboardIcon,
+  HomeQuickPlayIcon,
+} from "../src/components/icons";
 import {
   BouncePress,
-  StaggeredList,
   LanguageSelector,
-  FlashingGlobeButton,
-  Button,
+  StaggeredList,
 } from "../src/components/common";
 import { BrainMascot } from "../src/components/common/Mascots";
-import { FONTS } from "../src/constants/theme";
+import {
+  FloatingBottomSheet,
+  FloatingBottomSheetView,
+  LanguagePill,
+  PillButton,
+  type FloatingBottomSheetRef,
+} from "../src/components/ui";
+import { FONTS, UI_COLORS, UI_RADII } from "../src/constants/theme";
+import { getHeadingFont } from "../src/utils/fontForLocale";
 
-function IconQuickPlay() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#FFD93D" />
-          <Stop offset="1" stopColor="#F59E0B" />
-        </LinearGradient>
-      </Defs>
-      <Path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#bolt)" />
-    </Svg>
-  );
-}
-
-function IconNewGame() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="sword1" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#C4B5FD" />
-          <Stop offset="1" stopColor="#9B59B6" />
-        </LinearGradient>
-      </Defs>
-      <Rect x="2" y="10" width="20" height="4" rx="2" fill="url(#sword1)" />
-      <Rect x="10" y="2" width="4" height="20" rx="2" fill="url(#sword1)" />
-      <Circle cx="12" cy="12" r="3" fill="#E8D0FF" />
-    </Svg>
-  );
-}
-
-function IconHomework() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="hw" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#34D399" />
-          <Stop offset="1" stopColor="#059669" />
-        </LinearGradient>
-      </Defs>
-      <Rect
-        x="3"
-        y="2"
-        width="14"
-        height="18"
-        rx="2"
-        stroke="url(#hw)"
-        strokeWidth="2"
-        fill="none"
-      />
-      <Path
-        d="M7 7h6M7 11h6M7 15h4"
-        stroke="#34D399"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <Circle cx="19" cy="17" r="4" fill="#059669" />
-      <Path
-        d="M17.5 17l1 1 2-2"
-        stroke="#fff"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-function IconConnectDevice() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="dev" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#E85D75" />
-          <Stop offset="1" stopColor="#C44D66" />
-        </LinearGradient>
-      </Defs>
-      <Rect
-        x="4"
-        y="3"
-        width="16"
-        height="18"
-        rx="3"
-        stroke="url(#dev)"
-        strokeWidth="2"
-        fill="none"
-      />
-      <Circle cx="12" cy="17" r="1.5" fill="#E85D75" />
-      <Path
-        d="M9 8h6M9 11h6"
-        stroke="#E85D75"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function IconChildren() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="kid" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#34D399" />
-          <Stop offset="1" stopColor="#10B981" />
-        </LinearGradient>
-      </Defs>
-      <Circle cx="9" cy="7" r="3" fill="url(#kid)" />
-      <Path
-        d="M3 19c0-3.3 2.7-6 6-6s6 2.7 6 6"
-        stroke="url(#kid)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <Circle cx="17" cy="9" r="2.5" fill="#6EE7B7" />
-      <Path
-        d="M13 19c0-2.5 1.8-4.5 4-4.5s4 2 4 4.5"
-        stroke="#6EE7B7"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </Svg>
-  );
-}
-
-function IconMatchHistory() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="chart" x1="0" y1="1" x2="0" y2="0">
-          <Stop offset="0" stopColor="#E85D75" />
-          <Stop offset="1" stopColor="#C44D66" />
-        </LinearGradient>
-      </Defs>
-      <Rect x="3" y="14" width="4" height="7" rx="1" fill="#F9A8D4" />
-      <Rect x="10" y="8" width="4" height="13" rx="1" fill="url(#chart)" />
-      <Rect x="17" y="3" width="4" height="18" rx="1" fill="#9B59B6" />
-      <Path
-        d="M3 3v18h18"
-        stroke="#F9A8D4"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </Svg>
-  );
-}
-
-function IconLeaderboard() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="trophy" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFD93D" />
-          <Stop offset="1" stopColor="#D97706" />
-        </LinearGradient>
-      </Defs>
-      <Path d="M6 3h12v6a6 6 0 01-12 0V3z" fill="url(#trophy)" />
-      <Path
-        d="M6 5H3a1 1 0 00-1 1v1a4 4 0 004 4"
-        stroke="#FFD93D"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <Path
-        d="M18 5h3a1 1 0 011 1v1a4 4 0 01-4 4"
-        stroke="#FFD93D"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <Rect x="10" y="15" width="4" height="4" rx="1" fill="#D97706" />
-      <Rect x="7" y="19" width="10" height="2" rx="1" fill="#92400E" />
-    </Svg>
-  );
-}
-
-interface MenuItemProps {
+interface HomeActionPillProps {
   icon: React.ReactNode;
+  iconBg?: string;
   title: string;
   subtitle: string;
   onPress: () => void;
   highlight?: boolean;
+  rightBadge?: string;
+  accessibilityLabel?: string;
 }
 
-function MenuItem({
+/**
+ * Full-pill action row aligned with SelectionCard and the matte obsidian theme.
+ */
+function HomeActionPill({
   icon,
+  iconBg,
   title,
   subtitle,
   onPress,
-  highlight,
-}: MenuItemProps) {
+  highlight = false,
+  rightBadge,
+  accessibilityLabel,
+}: HomeActionPillProps) {
+  const locale = useGameStore((s) => s.locale);
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
+
   return (
     <BouncePress
       onPress={() => {
         hapticsService.selection();
         onPress();
       }}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 20,
-        borderRadius: 16,
-        marginBottom: 12,
-        backgroundColor: highlight ? "#9B59B6" : "#1A1520",
-      }}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || `${title}. ${subtitle}`}
+      style={[
+        styles.actionPill,
+        highlight ? styles.actionPillHighlight : styles.actionPillDefault,
+      ]}
     >
       <View
-        style={{
-          width: 40,
-          height: 40,
-          alignItems: "center",
-          justifyContent: "center",
-          marginRight: 16,
-        }}
+        style={[
+          styles.actionIconBall,
+          highlight ? styles.iconBallHighlight : styles.iconBallDefault,
+          iconBg ? { backgroundColor: iconBg } : null,
+        ]}
       >
         {icon}
       </View>
-      <View style={{ flex: 1 }}>
+
+      <View style={styles.actionTextBlock}>
         <Text
-          style={{
-            fontSize: 16,
-            color: "#FFFFFF",
-            fontFamily: "Bungee_400Regular",
-          }}
+          style={[
+            styles.actionTitle,
+            {
+              fontFamily: headingFont,
+              color: highlight ? UI_COLORS.textOnPrimary : UI_COLORS.textPrimary,
+            },
+          ]}
+          numberOfLines={1}
         >
           {title}
         </Text>
         <Text
-          style={{
-            fontSize: 12,
-            marginTop: 4,
-            color: highlight ? "#E8D0FF" : "#7B6B8A",
-            fontFamily: FONTS.body,
-          }}
+          style={[
+            styles.actionSubtitle,
+            {
+              color: highlight
+                ? UI_COLORS.textSubtleOnPrimary
+                : UI_COLORS.textSecondary,
+            },
+          ]}
+          numberOfLines={2}
         >
           {subtitle}
         </Text>
       </View>
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Path
-          d="M9 18l6-6-6-6"
-          stroke={highlight ? "#E9D5FF" : "#5A4B6B"}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+
+      {rightBadge ? (
+        <View
+          style={[
+            styles.countBadge,
+            highlight && styles.countBadgeHighlight,
+          ]}
+        >
+          <Text
+            style={[
+              styles.countBadgeText,
+              highlight && styles.countBadgeTextHighlight,
+            ]}
+          >
+            {rightBadge}
+          </Text>
+        </View>
+      ) : null}
+
+      <View
+        style={[
+          styles.chevronWell,
+          highlight && styles.chevronWellHighlight,
+        ]}
+      >
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={highlight ? "#FFFFFF" : UI_COLORS.textMuted}
         />
-      </Svg>
+      </View>
     </BouncePress>
   );
 }
@@ -301,14 +172,19 @@ export default function HomeScreen() {
     logout,
     setCurrentMatch,
     setChildren,
-    childSession,
     children,
+    locale,
   } = useGameStore();
 
   const isGuest = userRole === "guest";
   const isChild = userRole === "child";
-  const logoutSheetRef = useRef<BottomSheetModal>(null);
-  const languageSheetRef = useRef<BottomSheetModal>(null);
+  const logoutSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const languageSheetRef = useRef<FloatingBottomSheetRef>(null);
+
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   useEffect(() => {
     if (userRole === "child" && apiService.hasToken()) {
@@ -329,27 +205,16 @@ export default function HomeScreen() {
         })
         .catch(() => {});
     }
-  }, [userRole]);
+  }, [userRole, setChildren]);
 
   const handleOpenLogout = useCallback(() => {
+    hapticsService.selection();
     logoutSheetRef.current?.present();
   }, []);
 
   const handleCloseLogout = useCallback(() => {
     logoutSheetRef.current?.dismiss();
   }, []);
-
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.6}
-      />
-    ),
-    [],
-  );
 
   const handleQuickPlay = () => {
     const match = {
@@ -398,330 +263,492 @@ export default function HomeScreen() {
     router.replace("/");
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-game-bg">
-      {/* Header */}
-      <View className="px-6 pt-4 pb-6">
-        <View className="flex-row items-center justify-between">
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View className="flex-row">
-              <View className="relative flex items-start bottom-3">
-                <BrainMascot speed={0.7} size={40} variant="headSideBounce" />
-              </View>
+  const activeName = isGuest
+    ? guestProfile?.displayName
+    : isChild
+      ? childProfile?.displayName
+      : parentUser?.displayName;
 
-              <View className="flex-col">
-                <Text
-                  className="text-3xl text-white"
-                  style={{ fontFamily: "LuckiestGuy_400Regular" }}
-                >
-                  {t("home:appName")}
-                </Text>
-                {(isGuest || isChild) &&
-                  (() => {
-                    const name = isGuest
-                      ? guestProfile?.displayName
-                      : childProfile?.displayName;
-                    return name ? null : (
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: "#B8A9C9",
-                          marginTop: 1,
-                          fontFamily: FONTS.body,
-                        }}
-                      >
-                        {t("home:welcomeBack")}
-                      </Text>
-                    );
-                  })()}
-              </View>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <FlashingGlobeButton
-              onPress={() => languageSheetRef.current?.present()}
-            />
-            {(isGuest || isChild) ? (
-              <Pressable
-                onPress={() => router.push("/profile" as any)}
-                style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: "#2A1F35",
-                  borderRadius: 20,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 2,
-                  borderColor: "#9B59B6",
-                }}
-              >
-                <AvatarIcon
-                  avatarId={isGuest ? guestProfile?.avatarId : childProfile?.avatarUrl}
-                  size={26}
-                />
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={handleOpenLogout}
-                style={{
-                  backgroundColor: "#1A1520",
-                  paddingHorizontal: 16,
-                  paddingVertical: 10,
-                  borderRadius: 20,
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#7B6B8A",
-                    fontSize: 12,
-                    fontFamily: "Bungee_400Regular",
-                  }}
-                >
-                  {t("auth:logout.button")}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-      </View>
+  const firstName = activeName?.trim().split(/\s+/)[0];
 
-      {/* Guest banner — shown only for guest users */}
-      {isGuest && guestProfile && (
-        <Pressable
-          className="mb-2"
-          onPress={() => router.push("/child/link-to-parent")}
-          style={{
-            marginHorizontal: 24,
-            marginBottom: 4,
-            backgroundColor: "#1A1520",
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "#9B59B6",
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
+  const greetingLine = firstName
+    ? `${t("home:welcomeBack")}, ${firstName}`
+    : t("home:welcomeBack");
+
+  const renderRightAccessory = (inLiquidGlass: boolean) => {
+    if (isGuest || isChild) {
+      return (
+        <TouchableOpacity
+          onPress={() => {
+            hapticsService.selection();
+            router.push("/profile" as any);
           }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t("common:profile", "Profile")}
+          style={[
+            styles.avatarHeaderButton,
+            inLiquidGlass && styles.avatarHeaderButtonBare,
+          ]}
         >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: "#0D0B14",
-              borderWidth: 2,
-              borderColor: "#9B59B6",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <AvatarIcon avatarId={guestProfile.avatarId} size={30} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                color: "#FFFFFF",
-                fontSize: 13,
-                fontFamily: FONTS.bodyBold,
-              }}
-            >
-              {guestProfile.displayName}
-            </Text>
-            <Text
-              style={{
-                color: "#9B59B6",
-                fontSize: 11,
-                fontFamily: FONTS.body,
-                marginTop: 1,
-              }}
-            >
-              {t("home:guest.linkBannerCta")}
-            </Text>
-          </View>
-          <Text style={{ color: "#9B59B6", fontSize: 18 }}>{"›"}</Text>
-        </Pressable>
+          <AvatarIcon
+            avatarId={
+              isGuest ? guestProfile?.avatarId : childProfile?.avatarUrl
+            }
+            size={28}
+          />
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        onPress={handleOpenLogout}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={t("auth:logout.button")}
+        style={[
+          styles.logoutHeaderButton,
+          inLiquidGlass && styles.logoutHeaderButtonBare,
+        ]}
+      >
+        <Ionicons
+          name="log-out-outline"
+          size={17}
+          color={UI_COLORS.textSecondary}
+        />
+        {!inLiquidGlass ? (
+          <Text style={styles.logoutHeaderText}>{t("auth:logout.button")}</Text>
+        ) : null}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+      {Platform.OS === "ios" && (
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerStyle: { backgroundColor: "transparent" },
+            headerShadowVisible: false,
+            headerBackVisible: false,
+            title: "",
+            headerRight: () => (
+              <View style={styles.iosHeaderRight}>
+                <LanguagePill
+                  transparent
+                  onPress={() => languageSheetRef.current?.present()}
+                />
+                <View style={styles.iosHeaderDivider} />
+                {renderRightAccessory(true)}
+              </View>
+            ),
+          }}
+        />
       )}
 
+      {/* Top Bar matching RoleSelectScreen */}
+      <View style={[styles.topBar, Platform.OS === "ios" && styles.topBarIOS]}>
+        <BrainMascot size={46} variant="floatUp" interactive />
+
+        {Platform.OS !== "ios" && (
+          <View style={styles.androidTopRight}>
+            <LanguagePill
+              onPress={() => languageSheetRef.current?.present()}
+            />
+            {renderRightAccessory(false)}
+          </View>
+        )}
+      </View>
+
       <ScrollView
-        className="flex-1 px-6 mt-2"
-        contentContainerStyle={{ paddingBottom: 40 }}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <StaggeredList staggerMs={80}>
-          {/* Quick play / solo — always available */}
-          {__DEV__ && isMockMode && !isGuest && (
-            <View style={{ position: "relative", overflow: "visible" }}>
-              <View
-                style={{
-                  position: "absolute",
-                  top: -45,
-                  right: 10,
-                  zIndex: -1,
-                  transform: [{ rotate: "10deg" }],
-                }}
-              >
-                <BrainMascot size={85} />
-              </View>
-              <MenuItem
-                icon={<IconQuickPlay />}
+        <View style={styles.mainColumn}>
+          {/* Hero Title & Personalized Greeting */}
+          <View style={styles.heroSection}>
+            <Text style={[styles.heading, { fontFamily: headingFont }]}>
+              {t("home:appName")}
+            </Text>
+            <Text style={styles.subheading}>{greetingLine}</Text>
+          </View>
+
+          {/* Featured Primary Action Frame (concentric outer shell) */}
+          <View
+            style={[
+              styles.featuredShell,
+              __DEV__ && isMockMode && !isGuest && styles.featuredShellStacked,
+            ]}
+          >
+            {__DEV__ && isMockMode && !isGuest && (
+              <HomeActionPill
+                highlight
+                icon={<HomeQuickPlayIcon size={28} />}
                 title={t("home:menu.quickPlay")}
                 subtitle={t("home:menu.quickPlayDesc")}
                 onPress={handleQuickPlay}
-                highlight
               />
-            </View>
-          )}
+            )}
 
-          {/* Guest: solo play as the highlighted primary action */}
-          {isGuest && (
-            <View style={{ position: "relative", overflow: "visible" }}>
-              <View
-                style={{
-                  position: "absolute",
-                  top: -45,
-                  right: 10,
-                  zIndex: -1,
-                  transform: [{ rotate: "10deg" }],
-                }}
-              >
-                <BrainMascot size={85} />
-              </View>
-              <MenuItem
-                icon={<IconQuickPlay />}
+            {isGuest && (
+              <HomeActionPill
+                highlight
+                icon={<HomeControllerIcon size={29} />}
                 title={t("home:menu.soloPlay")}
                 subtitle={t("home:menu.soloPlayDesc")}
                 onPress={() => router.push("/match/create")}
-                highlight
               />
-            </View>
-          )}
+            )}
 
-          {/* Parent / child: create a new game */}
-          {!isGuest && (
-            <View style={{ position: "relative" }}>
-              <View
-                style={{
-                  position: "absolute",
-                  top: -20,
-                  left: -20,
-                  zIndex: 10,
-                  transform: [{ rotate: "-15deg" }],
-                }}
-              ></View>
-              <MenuItem
-                icon={<IconNewGame />}
+            {!isGuest && (
+              <HomeActionPill
+                highlight
+                icon={<HomeControllerIcon size={29} />}
                 title={t("home:menu.startNewGame")}
                 subtitle={t("home:menu.startNewGameDesc")}
                 onPress={() => router.push("/match/create")}
-                highlight
               />
-            </View>
-          )}
+            )}
+          </View>
 
-          <MenuItem
-            icon={<IconHomework />}
-            title={t("home:menu.homeworkAssist")}
-            subtitle={t("home:menu.homeworkAssistDesc")}
-            onPress={() => router.push("/homework" as any)}
-          />
-
-
-          {userRole !== "child" && !isGuest && (
-            <MenuItem
-              icon={<IconChildren />}
-              title={t("home:menu.myChildren")}
-              subtitle={t("home:menu.myChildrenDesc")}
-              onPress={() => router.push("/child")}
+          {/* Secondary Action Stack */}
+          <StaggeredList staggerMs={65}>
+            <HomeActionPill
+              icon={<HomeHomeworkIcon size={28} />}
+              iconBg={UI_COLORS.primarySoft}
+              title={t("home:menu.homeworkAssist")}
+              subtitle={t("home:menu.homeworkAssistDesc")}
+              onPress={() => router.push("/homework" as any)}
             />
-          )}
 
-          <MenuItem
-            icon={<IconMatchHistory />}
-            title={t("home:menu.matchHistory")}
-            subtitle={t("home:menu.matchHistoryDesc")}
-            onPress={() => router.push("/match/history" as any)}
-          />
+            {userRole !== "child" && !isGuest && (
+              <HomeActionPill
+                icon={<HomeChildrenIcon size={28} />}
+                iconBg="rgba(167, 139, 250, 0.14)"
+                title={t("home:menu.myChildren")}
+                subtitle={t("home:menu.myChildrenDesc")}
+                rightBadge={
+                  Array.isArray(children) && children.length > 0
+                    ? String(children.length)
+                    : undefined
+                }
+                onPress={() => router.push("/child")}
+              />
+            )}
 
-          {!isGuest && !isChild && (
-            <MenuItem
-              icon={<IconLeaderboard />}
-              title={t("home:menu.leaderboard")}
-              subtitle={t("home:menu.leaderboardDesc")}
-              onPress={() => router.push("/leaderboard" as any)}
+            <HomeActionPill
+              icon={<HomeHistoryIcon size={28} />}
+              iconBg="rgba(251, 113, 133, 0.14)"
+              title={t("home:menu.matchHistory")}
+              subtitle={t("home:menu.matchHistoryDesc")}
+              onPress={() => router.push("/match/history" as any)}
             />
-          )}
 
-          {/* Guest: link to parent as a menu item too */}
-          {isGuest && (
-            <MenuItem
-              icon={<IconChildren />}
-              title={t("home:guest.linkMenuItem")}
-              subtitle={t("home:guest.linkMenuItemDesc")}
-              onPress={() => router.push("/child/link-to-parent")}
-            />
-          )}
-        </StaggeredList>
+            {!isGuest && !isChild && (
+              <HomeActionPill
+                icon={<HomeLeaderboardIcon size={28} />}
+                iconBg="rgba(251, 191, 36, 0.14)"
+                title={t("home:menu.leaderboard")}
+                subtitle={t("home:menu.leaderboardDesc")}
+                onPress={() => router.push("/leaderboard" as any)}
+              />
+            )}
+
+            {isGuest && (
+              <HomeActionPill
+                icon={
+                  <Ionicons
+                    name="link-outline"
+                    size={22}
+                    color="#A29BFE"
+                  />
+                }
+                title={t("home:guest.linkMenuItem")}
+                subtitle={t("home:guest.linkMenuItemDesc")}
+                onPress={() => router.push("/child/link-to-parent")}
+              />
+            )}
+          </StaggeredList>
+        </View>
       </ScrollView>
 
-      <BottomSheetModal
-        ref={logoutSheetRef}
-        enablePanDownToClose
-        enableDynamicSizing={true}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: "#1A1520",
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-        }}
-        handleIndicatorStyle={{
-          backgroundColor: "#5A4B6B",
-          width: 40,
-          height: 4,
-        }}
-      >
-        <BottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 40, paddingTop: 10 }}
-        >
-          <Text
-            style={{
-              color: "#FFFFFF",
-              fontSize: 22,
-              textAlign: "center",
-              marginBottom: 12,
-              fontFamily: "LuckiestGuy_400Regular",
-            }}
-          >
-            {t("auth:logout.title")}
-          </Text>
-          <Text
-            style={{
-              color: "#B8A9C9",
-              fontSize: 15,
-              textAlign: "center",
-              marginBottom: 32,
-              fontFamily: FONTS.body,
-            }}
-          >
-            {t("auth:logout.confirmation")}
-          </Text>
-          <View className="flex-col w-full gap-3">
-            <Button
-              label={t("auth:logout.button")}
-              variant="danger"
-              onPress={handleLogout}
-              className="min-w-full max-w-none"
-            />
-            <Button
-              label={t("common:buttons.cancel")}
-              variant="secondary"
-              onPress={handleCloseLogout}
-              className="w-full min-w-full max-w-none"
+      {/* Sign Out Confirmation Bottom Sheet */}
+      <FloatingBottomSheet ref={logoutSheetRef} enableDynamicSizing>
+        <FloatingBottomSheetView style={styles.sheetContent}>
+          <View style={styles.sheetIconBall}>
+            <Ionicons
+              name="log-out-outline"
+              size={26}
+              color={UI_COLORS.coral}
             />
           </View>
-        </BottomSheetView>
-      </BottomSheetModal>
+          <Text style={[styles.sheetTitle, { fontFamily: headingFont }]}>
+            {t("auth:logout.title")}
+          </Text>
+          <Text style={styles.sheetBody}>{t("auth:logout.confirmation")}</Text>
+
+          <View style={styles.sheetActions}>
+            <View style={styles.sheetActionSlot}>
+              <PillButton
+                label={t("common:buttons.cancel")}
+                variant="secondary"
+                size="lg"
+                onPress={handleCloseLogout}
+              />
+            </View>
+            <View style={styles.sheetActionSlot}>
+              <PillButton
+                label={t("auth:logout.button")}
+                size="lg"
+                onPress={handleLogout}
+                style={styles.logoutConfirmButton}
+              />
+            </View>
+          </View>
+        </FloatingBottomSheetView>
+      </FloatingBottomSheet>
 
       <LanguageSelector ref={languageSheetRef} />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  topBarIOS: {
+    paddingTop: 0,
+    minHeight: 44,
+  },
+  iosHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  iosHeaderDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+  androidTopRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  avatarHeaderButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(108, 92, 231, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarHeaderButtonBare: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+  },
+  logoutHeaderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: UI_RADII.pill,
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.07)",
+  },
+  logoutHeaderButtonBare: {
+    height: 28,
+    paddingHorizontal: 6,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+  },
+  logoutHeaderText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    color: UI_COLORS.textSecondary,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 32,
+  },
+  mainColumn: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+  },
+  heroSection: {
+    marginBottom: 20,
+  },
+  heading: {
+    marginTop: 4,
+    paddingTop: 2,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: 0.4,
+    color: UI_COLORS.textPrimary,
+  },
+  subheading: {
+    marginTop: 4,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+  },
+  featuredShell: {
+    backgroundColor: "#161221",
+    borderRadius: UI_RADII.pill,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 5,
+    gap: 8,
+    marginBottom: 14,
+  },
+  featuredShellStacked: {
+    borderRadius: 38,
+    borderCurve: "continuous",
+  },
+  actionPill: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    paddingVertical: 5,
+    paddingLeft: 5,
+    paddingRight: 14,
+    gap: 12,
+  },
+  actionPillDefault: {
+    backgroundColor: "#1A1520",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
+    marginBottom: 10,
+  },
+  actionPillHighlight: {
+    backgroundColor: UI_COLORS.primary,
+  },
+  actionIconBall: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconBallDefault: {
+    backgroundColor: "#241D2E",
+  },
+  iconBallHighlight: {
+    backgroundColor: "#5746CE",
+  },
+  actionTextBlock: {
+    flex: 1,
+    gap: 1,
+  },
+  actionTitle: {
+    fontSize: 16,
+    lineHeight: 20,
+    paddingTop: 1,
+    letterSpacing: 0.4,
+  },
+  actionSubtitle: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  countBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: UI_RADII.pill,
+    backgroundColor: "rgba(108, 92, 231, 0.16)",
+  },
+  countBadgeHighlight: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  countBadgeText: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 12,
+    color: "#A29BFE",
+  },
+  countBadgeTextHighlight: {
+    color: "#FFFFFF",
+  },
+  chevronWell: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  chevronWellHighlight: {
+    backgroundColor: "rgba(255, 255, 255, 0.16)",
+  },
+  sheetContent: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  sheetIconBall: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "rgba(232, 93, 117, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: UI_COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  sheetBody: {
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  sheetActions: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 10,
+  },
+  sheetActionSlot: {
+    flex: 1,
+  },
+  logoutConfirmButton: {
+    backgroundColor: UI_COLORS.coral,
+  },
+});

@@ -1,25 +1,30 @@
-import { useEffect, useState } from "react";
-import { View, Text, Alert, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { apiService } from "../../src/services/api";
 import { AnimatedLoader } from "../../src/components/common";
-import { FONTS } from "../../src/constants/theme";
-import { useTranslation } from "react-i18next";
-
-
-
+import { useGameStore } from "../../src/stores/gameStore";
+import { FONTS, UI_COLORS } from "../../src/constants/theme";
+import { getHeadingFont } from "../../src/utils/fontForLocale";
 
 export default function HomeworkProcessingScreen() {
-  const { t } = useTranslation("homework");
+  const { t } = useTranslation(["homework", "common"]);
+  const locale = useGameStore((s) => s.locale);
   const STEPS = t("processing.steps", { returnObjects: true }) as string[];
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const [stepIndex, setStepIndex] = useState(0);
 
+  const headingFont = (() => {
+    void locale;
+    return getHeadingFont();
+  })();
 
   useEffect(() => {
     const stepInterval = setInterval(() => {
-      setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+      setStepIndex((i) => Math.min(i + 1, Math.max(0, STEPS.length - 1)));
     }, 5000);
 
     const pollInterval = setInterval(async () => {
@@ -48,25 +53,178 @@ export default function HomeworkProcessingScreen() {
       clearInterval(pollInterval);
       clearInterval(stepInterval);
     };
-  }, [sessionId]);
+  }, [STEPS.length, sessionId, t]);
 
   return (
-    <SafeAreaView style={styles.bg}>
-      <View style={styles.center}>
-        <AnimatedLoader size="lg" color="#6C5CE7" />
-        <Text style={styles.title}>{t("processing.title")}</Text>
-        <Text style={styles.step}>{STEPS[stepIndex]}</Text>
-        <Text style={styles.hint}>{t("processing.hint")}</Text>
+    <SafeAreaView style={styles.root}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerStyle: { backgroundColor: "transparent" },
+          headerShadowVisible: false,
+          title: "",
+          headerBackVisible: true,
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: UI_COLORS.textPrimary,
+        }}
+      />
 
+      <View style={styles.center}>
+        <View style={styles.shell}>
+          <View style={styles.heroTile}>
+            <View style={styles.loaderHalo}>
+              <AnimatedLoader size="lg" color={UI_COLORS.primary} />
+            </View>
+            <Text style={[styles.title, { fontFamily: headingFont }]}>
+              {t("processing.title")}
+            </Text>
+            <Text style={styles.hint}>{t("processing.hint")}</Text>
+          </View>
+
+          <View style={styles.stepsTile}>
+            {STEPS.map((label, idx) => {
+              const isDone = idx < stepIndex;
+              const isActive = idx === stepIndex;
+
+              return (
+                <View key={idx} style={styles.stepRow}>
+                  <View
+                    style={[
+                      styles.stepDot,
+                      isDone && styles.stepDotDone,
+                      isActive && styles.stepDotActive,
+                    ]}
+                  >
+                    {isDone ? (
+                      <Ionicons
+                        name="checkmark"
+                        size={12}
+                        color={UI_COLORS.mint}
+                      />
+                    ) : isActive ? (
+                      <View style={styles.stepPulseCore} />
+                    ) : null}
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      isDone && styles.stepLabelDone,
+                      isActive && styles.stepLabelActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: "#0D0B14" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-  title: { color: "#FFFFFF", fontSize: 20, fontFamily: "Bungee_400Regular", marginTop: 28, textAlign: "center" },
-  step: { color: "#9B59B6", fontSize: 14, fontFamily: FONTS.body, marginTop: 12, textAlign: "center" },
-  hint: { color: "#4A3D5A", fontSize: 12, fontFamily: FONTS.body, marginTop: 8 },
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  shell: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 30,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    padding: 5,
+    gap: 6,
+  },
+  heroTile: {
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderRadius: 25,
+    borderCurve: "continuous",
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    gap: 8,
+  },
+  loaderHalo: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: UI_COLORS.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  title: {
+    fontSize: 24,
+    lineHeight: 30,
+    color: UI_COLORS.textPrimary,
+    textAlign: "center",
+  },
+  hint: {
+    fontFamily: FONTS.body,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: UI_COLORS.textSecondary,
+    textAlign: "center",
+  },
+  stepsTile: {
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderRadius: 25,
+    borderCurve: "continuous",
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    gap: 12,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: UI_COLORS.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepDotDone: {
+    backgroundColor: "rgba(52, 211, 153, 0.16)",
+  },
+  stepDotActive: {
+    backgroundColor: "rgba(108, 92, 231, 0.24)",
+  },
+  stepPulseCore: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: UI_COLORS.primary,
+  },
+  stepLabel: {
+    flex: 1,
+    fontFamily: FONTS.body,
+    fontSize: 13.5,
+    color: UI_COLORS.textMuted,
+  },
+  stepLabelDone: {
+    fontFamily: FONTS.bodySemiBold,
+    color: UI_COLORS.mint,
+  },
+  stepLabelActive: {
+    fontFamily: FONTS.bodyBold,
+    color: UI_COLORS.textPrimary,
+  },
 });

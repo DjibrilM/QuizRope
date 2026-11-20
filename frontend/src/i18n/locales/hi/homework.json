@@ -1,24 +1,42 @@
 {
   "title": "होमवर्क",
+  "subtitle": "चरण-दर-चरण हल और अभ्यास क्विज़ के लिए कोई भी पेज स्कैन करें",
   "status": {
-    "ready": "✓ तैयार",
+    "ready": "तैयार",
     "analyzing": "विश्लेषण हो रहा है…",
-    "failed": "✕ विफल"
+    "failed": "विफल"
   },
   "session": {
     "defaultTitle": "होमवर्क सेशन",
-    "quizDone": "क्विज़ पूर्ण ✓",
+    "quizDone": "क्विज़ पूर्ण",
     "reviewTitle": "फ़ोटो देखें",
+    "viewPhoto": "पूरी फ़ोटो देखें",
+    "solution": "हल",
+    "copied": "कॉपी हो गया",
     "notFound": "सेशन नहीं मिला",
     "assistTitle": "सहायता",
-    "noExplanation": "कोई व्याख्या उपलब्ध नहीं।"
+    "noExplanation": "कोई व्याख्या उपलब्ध नहीं।",
+    "visualGuide": "विज़ुअल गाइड",
+    "cycle": "चक्र",
+    "vennBoth": "दोनों",
+    "vennCommon": "समान",
+    "callouts": {
+      "idea": "मुख्य विचार",
+      "tip": "मददगार टिप",
+      "watchout": "सावधान!",
+      "check": "अपना उत्तर जांचें",
+      "example": "उदाहरण"
+    }
   },
   "actions": {
     "scanNew": "नया होमवर्क स्कैन करें",
     "scanNewDesc": "एक पेज की फ़ोटो लें और AI की व्याख्याएं पाएं",
+    "scansRemaining": "आज {{remaining}}/{{limit}} स्कैन शेष हैं",
+    "unlimitedScans": "असीमित डेव स्कैन",
     "retake": "फिर से लें",
     "analyze": "विश्लेषण करें",
-    "library": "लाइब्रेरी"
+    "library": "गैलरी",
+    "takePhoto": "फ़ोटो लें"
   },
   "filters": {
     "all": "सभी"
@@ -60,9 +78,20 @@
   },
   "chat": {
     "title": "AI से पूछें",
+    "askShort": "AI से पूछें",
     "subtitle": "अपने होमवर्क के बारे में कुछ भी पूछें",
     "placeholder": "एक प्रश्न पूछें…",
-    "emptyState": "अपने होमवर्क के बारे में कुछ भी पूछें"
+    "emptyState": "अपने होमवर्क के बारे में कुछ भी पूछें",
+    "suggestions": {
+      "hintLabel": "संकेत दें",
+      "hintPrompt": "क्या आप बिना पूरा उत्तर बताए मुझे थोड़ा संकेत दे सकते हैं?",
+      "stepsLabel": "चरण-दर-चरण",
+      "stepsPrompt": "क्या आप इसे चरण-दर-चरण समझा सकते हैं?",
+      "simpleLabel": "आसान भाषा में",
+      "simplePrompt": "क्या आप मुख्य विचार को सरल शब्दों में समझा सकते हैं?",
+      "firstLabel": "पहला कदम?",
+      "firstPrompt": "इसे हल करने के लिए मेरा पहला कदम क्या होना चाहिए?"
+    }
   },
   "quiz": {
     "title": "क्विज़",

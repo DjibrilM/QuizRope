@@ -1,43 +1,36 @@
-import Svg, {
-  Defs,
-  LinearGradient,
-  Stop,
-  Circle,
-  Path,
-} from "react-native-svg";
+import React from "react";
+import Svg, { Circle, Path } from "react-native-svg";
 import { AvatarIcon } from "../common";
 
-function GuestIcon({ avatarId }: { avatarId?: string }) {
-  if (avatarId) return <AvatarIcon avatarId={avatarId} size={48} />;
+interface GuestIconProps {
+  avatarId?: string;
+  size?: number;
+  selected?: boolean;
+}
+
+/**
+ * Playful discovery sparkles for instant guest play, or the guest's chosen avatar.
+ */
+function GuestIcon({ avatarId, size = 24, selected = false }: GuestIconProps) {
+  if (avatarId) return <AvatarIcon avatarId={avatarId} size={size} />;
+
+  const primaryStar = selected ? "#FFFFFF" : "#FBBF24";
+  const miniStar = selected ? "rgba(255, 255, 255, 0.85)" : "#FDE68A";
 
   return (
-    <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
-      <Defs>
-        <LinearGradient id="guestGrad" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#6EE7B7" />
-          <Stop offset="1" stopColor="#059669" />
-        </LinearGradient>
-      </Defs>
-      {/* Cloaked/Mystery Shape */}
-      <Circle
-        cx="12"
-        cy="8"
-        r="4.5"
-        stroke="url(#guestGrad)"
-        strokeWidth={2.5}
-      />
+    <Svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      {/* Main smooth 4-point discovery star */}
       <Path
-        d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"
-        stroke="url(#guestGrad)"
-        strokeWidth={2.5}
-        strokeLinecap="round"
+        d="M12 6.5C12.8 11.9 14.1 13.2 20.5 15C14.1 16.8 12.8 18.1 12 23.5C11.2 18.1 9.9 16.8 3.5 15C9.9 13.2 11.2 11.9 12 6.5Z"
+        fill={primaryStar}
       />
-      {/* Question Mark Accent */}
+      {/* Orbiting mini sparkle */}
       <Path
-        d="M11 7h1v1h-1zM11 9h1v3h-1z"
-        fill="#FFFFFF"
-        transform="translate(0, -1)"
+        d="M21.5 4C21.85 6.2 22.3 6.65 24.5 7.5C22.3 8.35 21.85 8.8 21.5 11C21.15 8.8 20.7 8.35 18.5 7.5C20.7 6.65 21.15 6.2 21.5 4Z"
+        fill={miniStar}
       />
+      {/* Subtle accent dot */}
+      <Circle cx="21.5" cy="21" r="1.4" fill={miniStar} />
     </Svg>
   );
 }

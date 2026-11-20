@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
@@ -22,16 +22,16 @@ export function BackButton({ absolute = false, onPress }: BackButtonProps) {
           : undefined
       }
     >
-      <Pressable
+      <TouchableOpacity
         onPress={onPress || (() => router.back())}
-        style={({ pressed }) => ({
+        activeOpacity={0.75}
+        style={{
           width: 40,
           height: 40,
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 20,
-          backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "transparent",
-        })}
+        }}
         accessibilityRole="button"
         accessibilityLabel={t("accessibility.goBack")}
       >
@@ -44,7 +44,7 @@ export function BackButton({ absolute = false, onPress }: BackButtonProps) {
             strokeLinejoin="round"
           />
         </Svg>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   );
 }

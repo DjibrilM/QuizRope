@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "单人 - {{subject}}",
+    "setupTitle": "设置挑战",
+    "setupSubtitle": "选择难度、回合数和练习主题",
     "startButton": "开始游戏",
     "contextLabel": "自定义练习",
     "contextPlaceholder": "例如：平方根、分母不超过20的分数……",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "分屏 · {{subject}}",
+    "setupTitle": "对战设置",
     "subtitle": "两名玩家 · 同一设备",
     "ageGroupLabel": "年龄组",
     "playersLabel": "玩家",

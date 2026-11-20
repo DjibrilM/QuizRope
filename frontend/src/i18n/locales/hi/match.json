@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "एकल - {{subject}}",
+    "setupTitle": "चुनौती सेट करें",
+    "setupSubtitle": "कठिनाई, राउंड और वैकल्पिक विषय चुनें",
     "startButton": "खेल शुरू करें",
     "contextLabel": "अपना अभ्यास अनुकूलित करें",
     "contextPlaceholder": "जैसे. वर्गमूल, 20 तक के हर वाले भिन्न...",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "स्प्लिट स्क्रीन · {{subject}}",
+    "setupTitle": "मुकाबला सेटअप",
     "subtitle": "दो खिलाड़ी · एक ही डिवाइस",
     "ageGroupLabel": "आयु समूह",
     "playersLabel": "खिलाड़ी",

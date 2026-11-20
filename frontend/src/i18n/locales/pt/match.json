@@ -22,6 +22,8 @@
   },
   "solo": {
     "title": "Solo - {{subject}}",
+    "setupTitle": "Configure a partida",
+    "setupSubtitle": "Escolha dificuldade, rodadas e foco opcional",
     "startButton": "Iniciar",
     "contextLabel": "Personalize sua prática",
     "contextPlaceholder": "ex. raízes quadradas, frações com denominadores até 20…",
@@ -85,6 +87,7 @@
   },
   "split": {
     "title": "Tela Dividida · {{subject}}",
+    "setupTitle": "Configurar duelo",
     "subtitle": "Dois jogadores · Mesmo dispositivo",
     "ageGroupLabel": "Faixa etária",
     "playersLabel": "Jogadores",
