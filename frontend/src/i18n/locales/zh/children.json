@@ -5,8 +5,8 @@
   "chooseAvatar": "选择头像",
   "ageGrade": "{{age}}岁 - {{grade}}年级",
   "ageGradeAccessibility": "{{name}}，{{age}}岁，{{grade}}年级",
-  "emptyTitle": "还没有玩家！",
-  "emptySubtitle": "添加您的第一个小问答高手，开始乐趣吧",
+  "emptyTitle": "还没有孩子",
+  "emptySubtitle": "添加您的第一个孩子即可开始",
   "form": {
     "namePlaceholder": "孩子的名字",
     "agePlaceholder": "年龄",
@@ -29,6 +29,36 @@
     "expired": "代码已过期",
     "ok": "知道了",
     "errorTitle": "生成代码失败",
-    "errorBody": "出了点问题，请重试。"
+    "errorBody": "出了点问题，请重试。",
+    "connectedDevice": "{{name}} 的设备已成功关联！",
+    "shareMessage": "在 QuizRope 中输入代码 {{code}} 即可关联 {{name}} 的设备。",
+    "linkedStatus": "已关联",
+    "unlinkedStatus": "未关联",
+    "linkChildAccessibility": "管理 {{name}} 的设备关联",
+    "manageTitle": "设备关联",
+    "manageSubtitle": "{{name}} 已关联到设备。可生成新代码连接其他设备，或解除关联并保留学习记录。",
+    "getNewCode": "获取新关联码",
+    "unlinkDevice": "解除设备关联",
+    "unlinkConfirmTitle": "要解除 {{name}} 的设备关联吗？",
+    "unlinkConfirmBody": "孩子端设备将退出登录，测验记录和作业仍保留在您的家长账户中。",
+    "unlinkConfirmCta": "解除关联",
+    "unlinking": "正在解除...",
+    "unlinkError": "无法解除设备关联，请重试。",
+    "stepOne": "1. 在游客模式点击「关联家长」（或「我是玩家」）",
+    "stepTwo": "2. 扫描此二维码或输入 6 位邀请码",
+    "inviteGuestTitle": "邀请游客孩子加入",
+    "inviteGuestDesc": "生成 1 分钟邀请码，保留游客昵称、头像和学习进度",
+    "familyInviteTitle": "家庭中心邀请",
+    "autoRefreshing": "正在刷新邀请码...",
+    "connectedGuest": "已加入您的家庭中心！"
+  },
+  "remove": {
+    "title": "移除孩子？",
+    "message": "确定要移除 {{name}} 吗？此操作无法撤销。",
+    "confirm": "移除",
+    "cancel": "保留",
+    "removing": "正在移除...",
+    "biometricPrompt": "验证身份以移除资料",
+    "usePasscode": "使用密码"
   }
 }

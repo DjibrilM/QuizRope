@@ -3,7 +3,7 @@ import "../src/i18n";
 import { Stack, router, useSegments } from "expo-router";
 import { FONTS, FORTNITE_COLORS } from "../src/constants/theme";
 import { StatusBar } from "expo-status-bar";
-import { I18nManager, View } from "react-native";
+import { I18nManager } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { FloatingSheetPortalProvider } from "../src/components/ui";
@@ -31,8 +31,8 @@ import { initGuestDb, clearAllGuestData } from "../src/services/guestDb";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider, useToast } from "../src/context/ToastContext";
 import { socketService } from "../src/services/socket";
-import { AnimatedLoader } from "../src/components/common/AnimatedLoader";
-import { AppTitle } from "../src/components/auth/AppTitle";
+import { AnimatedSplashScreen } from "../src/components/common/AnimatedSplashScreen";
+import { useTranslation } from "react-i18next";
 import { NotificationService } from "../src/services/NotificationService";
 import * as Notifications from 'expo-notifications';
 
@@ -64,28 +64,68 @@ function ChildSessionWatcher() {
 
   useEffect(() => {
     const { childSession, logout } = useGameStore.getState();
-    if (!childSession?.sessionToken) return;
+    if (!childSession?.sessionToken && !childSession?.childId) return;
 
     const socket = socketService.connect();
-    socket.emit("session:watch", { sessionToken: childSession.sessionToken });
+    const watchPayload = {
+      ...(childSession.sessionToken && {
+        sessionToken: childSession.sessionToken,
+      }),
+      ...(childSession.childId && { childId: childSession.childId }),
+    };
+
+    const emitWatch = () => {
+      socket.emit("session:watch", watchPayload);
+    };
+
+    emitWatch();
+    socket.on("connect", emitWatch);
+
+    const endChildSession = (
+      title: string,
+      message: string,
+      targetRoute: "/" | "/auth/child-deleted",
+    ) => {
+      showInfo(message, title);
+      clearAllGuestData().catch(() => {});
+      apiService.clearToken();
+      logout();
+      queryClient.clear();
+      router.replace(targetRoute);
+    };
 
     const handleChildDeleted = (data: { childId: string }) => {
       if (data.childId === childSession.childId) {
-        showInfo("Your profile was removed by your parent.", "Profile Removed");
-        clearAllGuestData().catch(() => {});
-        apiService.clearToken();
-        logout();
-        queryClient.clear();
-        router.replace("/auth/child-deleted");
+        endChildSession(
+          "Profile Removed",
+          "Your profile was removed by your parent.",
+          "/auth/child-deleted",
+        );
+      }
+    };
+
+    const handleChildUnlinked = (data: { childId: string }) => {
+      if (data.childId === childSession.childId) {
+        endChildSession(
+          i18n.t("auth:childDeleted.unlinkedTitle", "Device Unlinked"),
+          i18n.t(
+            "auth:childDeleted.unlinkedMessage",
+            "This device was disconnected by your parent.",
+          ),
+          "/",
+        );
       }
     };
 
     socket.on("child:deleted", handleChildDeleted);
+    socket.on("child:unlinked", handleChildUnlinked);
 
     return () => {
+      socket.off("connect", emitWatch);
       socket.off("child:deleted", handleChildDeleted);
+      socket.off("child:unlinked", handleChildUnlinked);
     };
-  }, [isAuthenticated, childSession?.sessionToken, showToast, showInfo]);
+  }, [isAuthenticated, childSession?.sessionToken, childSession?.childId, showToast, showInfo]);
 
   return null;
 }
@@ -148,30 +188,6 @@ const PUBLIC_ROUTES = [
   "index",
   "auth", // covers auth/login, auth/signup, auth/child-join, auth/forgot-password, auth/guest-setup, auth/verify-email
 ];
-
-function ProfileSplash() {
-  const { userRole, childProfile } = useGameStore();
-  const isChild = userRole === "child";
-
-  const message = isChild && childProfile?.displayName
-    ? `Welcome back, ${childProfile.displayName}!`
-    : "Loading your profile...";
-
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#0D0B14",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 32,
-      }}
-    >
-      <AppTitle />
-      <AnimatedLoader size="lg" message={message} />
-    </View>
-  );
-}
 
 /**
  * Runs once after Zustand hydration for authenticated (non-guest) users.
@@ -354,45 +370,48 @@ export default function RootLayout() {
     };
   }, []);
 
+  const { t } = useTranslation(["home", "common"]);
+  const { _hasHydrated, userRole, childProfile } = useGameStore();
+  const [splashDone, setSplashDone] = useState(false);
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
+
   useLocaleSync();
   const isVerified = useProfileVerification();
   useProtectedRoute(!!fontsLoaded, isVerified);
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded || fontError) {
-      await SplashScreen.hideAsync();
+    if ((fontsLoaded || fontError) && !nativeSplashHidden) {
+      await SplashScreen.hideAsync().catch(() => {});
+      setNativeSplashHidden(true);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, nativeSplashHidden]);
+
+  // Safety guard so AnimatedSplashScreen always activates even if onLayout fired early
+  useEffect(() => {
+    if (!(fontsLoaded || fontError) || nativeSplashHidden) return;
+    const fallback = setTimeout(() => setNativeSplashHidden(true), 400);
+    return () => clearTimeout(fallback);
+  }, [fontsLoaded, fontError, nativeSplashHidden]);
 
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
-  // Show a branded loading screen while we verify the stored credentials
-  // and refresh the user's profile from the backend.
-  if (!isVerified) {
-    return (
-      <ErrorBoundary>
-        <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-          <SafeAreaProvider>
-            <StatusBar style="light" />
-            <ProfileSplash />
-          </SafeAreaProvider>
-        </GestureHandlerRootView>
-      </ErrorBoundary>
-    );
-  }
+  const splashStatusMessage =
+    userRole === "child" && childProfile?.displayName
+      ? `${t("home:welcomeBack")}, ${childProfile.displayName}!`
+      : t("common:labels.loading");
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
           <SafeAreaProvider>
-            <FloatingSheetPortalProvider>
-              <ToastProvider>
+            <ToastProvider>
+              <FloatingSheetPortalProvider>
                 <ApiToastBridge />
-                <ChildSessionWatcher />
-                <NotificationWatcher />
+                {isVerified && <ChildSessionWatcher />}
+                {isVerified && <NotificationWatcher />}
                 <StatusBar style="light" />
                 <Stack
                   screenOptions={{
@@ -413,8 +432,16 @@ export default function RootLayout() {
                     options={{ headerShown: false, title: "" }}
                   />
                 </Stack>
-              </ToastProvider>
-            </FloatingSheetPortalProvider>
+              </FloatingSheetPortalProvider>
+            </ToastProvider>
+            {!splashDone && (
+              <AnimatedSplashScreen
+                active={nativeSplashHidden}
+                ready={_hasHydrated && isVerified}
+                statusMessage={splashStatusMessage}
+                onFinish={() => setSplashDone(true)}
+              />
+            )}
           </SafeAreaProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>

@@ -33,6 +33,15 @@ export class Child extends Document {
   @Prop({ default: '3rd' })
   grade: string;
 
+  @Prop({ default: false })
+  isLinked: boolean;
+
+  @Prop({ type: Date, default: null })
+  linkedAt: Date | null;
+
+  @Prop({ default: 0 })
+  tokenVersion: number;
+
   @Prop({ default: Date.now })
   lastActiveAt: Date;
 }

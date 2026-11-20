@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { AVATARS } from "../../config/avatars";
+import { AVATARS, type Avatar } from "../../config/avatars";
 import { hapticsService } from "../../services/haptics";
 import { AvatarIcon } from "../common/AvatarIcons";
 import { FONTS, UI_COLORS } from "../../constants/theme";
@@ -94,6 +94,7 @@ function AvatarTile({
 interface AvatarPickerProps {
   selected: string;
   onSelect: (avatarId: string) => void;
+  avatars?: Avatar[];
   tileSize?: number;
   showTitle?: boolean;
   rightAction?: React.ReactNode;
@@ -102,6 +103,7 @@ interface AvatarPickerProps {
 export function AvatarPicker({
   selected,
   onSelect,
+  avatars = AVATARS,
   tileSize = 62,
   showTitle = true,
   rightAction,
@@ -118,14 +120,16 @@ export function AvatarPicker({
       ) : null}
 
       <View style={styles.grid}>
-        {AVATARS.map((avatar) => (
+        {avatars.map((avatar) => (
           <AvatarTile
             key={avatar.id}
             avatarId={avatar.id}
             selected={selected === avatar.id}
             tileSize={tileSize}
             accessibilityLabel={t("common:accessibility.avatarLabel", {
-              name: t(`common:avatars.${avatar.id}`),
+              name: t(`common:avatars.${avatar.id}`, {
+                defaultValue: avatar.label,
+              }),
             })}
             onSelect={onSelect}
           />

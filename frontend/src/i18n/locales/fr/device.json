@@ -7,16 +7,19 @@
     "enterCodeInstead": "Entrer le code à la place",
     "errorToken": "Impossible d'obtenir le code enfant. Appuyez ci-dessous pour réessayer.",
     "invalidCode": "Code invalide ou expiré. Veuillez réessayer.",
-    "connectAccount": "Connecter le compte"
+    "connectAccount": "Connecter le compte",
+    "linkingTo": "Association à",
+    "scanInstruction": "Pointez votre caméra vers le code QR sur l’appareil de votre parent.",
+    "joiningFamily": "Rejoindre la famille"
   },
   "connectDevice": {
     "title": "Connecter l'appareil",
     "loadingTitle": "Configuration...",
-    "loadingMessage": "Récupération des joueurs...",
+    "loadingMessage": "Chargement des enfants...",
     "selectChildTitle": "Qui joue ?",
     "selectChildInstruction": "Sélectionnez un enfant pour cet appareil",
     "addNewChild": "+ Ajouter un enfant",
-    "newPlayerTitle": "Nouveau joueur",
+    "newPlayerTitle": "Nouvel enfant",
     "linkingTitle": "Association de l'appareil...",
     "settingUpSession": "Configuration de la session de {{name}}",
     "errorTitle": "Une erreur est survenue",

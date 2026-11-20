@@ -11,7 +11,39 @@
     "avgTime": "Prom. {{time}}s",
     "viewHistory": "Ver historial",
     "noData": "Sin partidas",
-    "noDataSubtitle": "¡Juega algunas partidas para ver las estadísticas aquí!"
+    "noDataSubtitle": "¡Juega algunas partidas para ver las estadísticas aquí!",
+    "performanceBadge": {
+      "excellent": "Excelente",
+      "good": "Buen progreso",
+      "needsWork": "Necesita práctica"
+    },
+    "report": {
+      "title": "Informe de aprendizaje",
+      "strongAt": "Fuerte en",
+      "practiceNeeded": "Necesita más práctica",
+      "practiceHint": "Dedica más tiempo a {{subject}} para mejorar la precisión",
+      "noWeakSubject": "Sigue así — ¡más práctica da mejores resultados!",
+      "avgResponseTime": "Respuesta promedio",
+      "avgResponseValue": "{{time}}s por pregunta",
+      "slowNote": "Piensa con calma — ¡buen hábito!",
+      "fastNote": "¡Responde rápido y con seguridad!",
+      "recentTrend": "Tendencia reciente",
+      "trendImproving": "Mejorando (+{{delta}}%)",
+      "trendDipping": "Bajando (-{{delta}}%)",
+      "trendSteady": "Ritmo constante",
+      "trendComparison": "Partidas recientes: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) vs {{earlier}}% antes",
+      "rushedNote": "Muy rápido — ¡más calma!",
+      "quickCheckNote": "Rápido — revisa respuestas",
+      "slowPracticeNote": "Repasar preguntas falladas",
+      "practiceHintFast": "{{missed}} fallos de {{total}} con promedio de {{time}}s — lee con más calma.",
+      "practiceHintSlow": "{{missed}} fallos de {{total}} ({{time}}s prom.) — repasen juntos lo básico de {{subject}}.",
+      "practiceHintClose": "{{correct}} de {{total}} correctas — ¡cerca del 75%! Repasen los fallos juntos.",
+      "practiceHintSupport": "{{missed}} fallos de {{total}} — prueben un nivel más fácil o revisen las respuestas.",
+      "missedBadge": "{{missed}} fallos · {{accuracy}}%",
+      "allOnTrack": "Todas las materias superan el 70% — ¡buen progreso constante!",
+      "needMoreMatches": "Juega unas cuantas preguntas más para ver tendencias claras.",
+      "difficultyTitle": "Por dificultad"
+    }
   },
   "history": {
     "title": "Historial de partidas",
@@ -19,7 +51,7 @@
     "lost": "Perdió",
     "accuracy": "{{accuracy}}% de precisión",
     "noMatches": "No se encontraron partidas",
-    "noMatchesSubtitle": "Este jugador aún no ha completado ninguna partida."
+    "noMatchesSubtitle": "Este niño aún no ha completado ninguna partida."
   },
   "review": {
     "title": "Revisión de la partida",

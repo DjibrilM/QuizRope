@@ -11,7 +11,11 @@
     "tryAgain": "再试一次",
     "close": "关闭",
     "grantPermission": "授予权限",
-    "link": "关联"
+    "link": "关联",
+    "copy": "复制",
+    "copied": "已复制",
+    "paste": "粘贴",
+    "share": "分享"
   },
   "labels": {
     "or": "或",
@@ -93,5 +97,17 @@
     "blue": "蓝色",
     "redTeam": "红队",
     "blueTeam": "蓝队"
+  },
+  "parentProfile": {
+    "title": "家长资料",
+    "badge": "家长账号",
+    "familyOverview": "家庭概览",
+    "kids": "孩子",
+    "quizzes": "测验",
+    "homework": "作业",
+    "manageKids": "管理孩子资料",
+    "tapAvatarHint": "轻触更换头像",
+    "useGooglePhoto": "使用 Google 头像",
+    "noKidsYet": "尚未添加孩子资料"
   }
 }

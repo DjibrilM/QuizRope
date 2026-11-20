@@ -110,12 +110,16 @@ export class RealtimeGateway
   @SubscribeMessage("session:watch")
   handleSessionWatch(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { sessionToken: string },
+    @MessageBody() data: { sessionToken?: string; childId?: string },
   ) {
-    const room = `session:${data.sessionToken}`;
-    client.join(room);
+    if (data?.sessionToken) {
+      client.join(`session:${data.sessionToken.toUpperCase()}`);
+    }
+    if (data?.childId) {
+      client.join(`child:${data.childId}`);
+    }
     this.logger.log(
-      `Client ${client.id} watching session ${data.sessionToken}`,
+      `Client ${client.id} watching session=${data?.sessionToken ?? "-"} child=${data?.childId ?? "-"}`,
     );
   }
 
@@ -123,17 +127,42 @@ export class RealtimeGateway
     sessionToken: string,
     data: { parentId: string; childId?: string | null },
   ) {
-    const room = `session:${sessionToken}`;
+    const room = `session:${sessionToken.toUpperCase()}`;
     this.server.to(room).emit("session:authorized", data);
     this.logger.log(`Session ${sessionToken} authorized, notified room`);
   }
 
+  emitGuestLinkRedeemed(
+    code: string,
+    data: { parentId: string; childId: string; displayName?: string },
+  ) {
+    const room = `session:${code.toUpperCase()}`;
+    this.server.to(room).emit("guest-link:redeemed", data);
+    this.logger.log(`Guest link ${code} redeemed, notified room`);
+  }
+
   emitChildDeleted(sessionToken: string, childId: string) {
-    const room = `session:${sessionToken}`;
+    const room = `session:${sessionToken.toUpperCase()}`;
     this.server.to(room).emit("child:deleted", { childId });
+    this.server.to(`child:${childId}`).emit("child:deleted", { childId });
     this.logger.log(
       `Child ${childId} deleted, notified session ${sessionToken}`,
     );
+  }
+
+  emitChildDeletedToChild(childId: string) {
+    this.server.to(`child:${childId}`).emit("child:deleted", { childId });
+    this.logger.log(`Child ${childId} deleted, notified child room`);
+  }
+
+  emitChildUnlinked(childId: string, sessionTokens: string[] = []) {
+    for (const token of sessionTokens) {
+      this.server
+        .to(`session:${token.toUpperCase()}`)
+        .emit("child:unlinked", { childId });
+    }
+    this.server.to(`child:${childId}`).emit("child:unlinked", { childId });
+    this.logger.log(`Child ${childId} unlinked, notified device rooms`);
   }
 
   // ─── Homework chat ───────────────────────────────────────────────────────────

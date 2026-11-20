@@ -5,8 +5,8 @@
   "chooseAvatar": "Choisir un avatar",
   "ageGrade": "{{age}} ans - {{grade}}e année",
   "ageGradeAccessibility": "{{name}}, {{age}} ans, {{grade}}e année",
-  "emptyTitle": "Aucun joueur pour le moment !",
-  "emptySubtitle": "Ajoutez votre premier jeune quizzer pour commencer le plaisir",
+  "emptyTitle": "Aucun enfant pour le moment",
+  "emptySubtitle": "Ajoutez votre premier enfant pour commencer",
   "form": {
     "namePlaceholder": "Nom de l'enfant",
     "agePlaceholder": "Âge",
@@ -29,6 +29,36 @@
     "expired": "Code expiré",
     "ok": "Compris",
     "errorTitle": "Échec de la génération du code",
-    "errorBody": "Une erreur s'est produite. Veuillez réessayer."
+    "errorBody": "Une erreur s'est produite. Veuillez réessayer.",
+    "connectedDevice": "L’appareil de {{name}} est maintenant lié !",
+    "shareMessage": "Utilisez le code {{code}} dans QuizRope pour associer l’appareil de {{name}}.",
+    "linkedStatus": "Associé",
+    "unlinkedStatus": "Non associé",
+    "linkChildAccessibility": "Gérer l’appareil de {{name}}",
+    "manageTitle": "Appareil associé",
+    "manageSubtitle": "{{name}} est associé à un appareil. Générez un nouveau code pour connecter un autre appareil, ou dissociez sans effacer sa progression.",
+    "getNewCode": "Nouveau code de liaison",
+    "unlinkDevice": "Dissocier l’appareil",
+    "unlinkConfirmTitle": "Dissocier l’appareil de {{name}} ?",
+    "unlinkConfirmBody": "Son appareil sera déconnecté. Les quiz et devoirs restent enregistrés sur votre compte.",
+    "unlinkConfirmCta": "Dissocier",
+    "unlinking": "Dissociation...",
+    "unlinkError": "Impossible de dissocier l’appareil. Veuillez réessayer.",
+    "stepOne": "1. En mode Invité, touchez Lier au parent (ou Je suis joueur)",
+    "stepTwo": "2. Scannez ce QR code ou saisissez le code à 6 caractères",
+    "inviteGuestTitle": "Inviter un compte invité",
+    "inviteGuestDesc": "Créez un code d’1 minute pour importer son nom et ses progrès",
+    "familyInviteTitle": "Invitation Famille",
+    "autoRefreshing": "Génération d’un nouveau code...",
+    "connectedGuest": "A rejoint votre espace famille !"
+  },
+  "remove": {
+    "title": "Supprimer l’enfant ?",
+    "message": "Voulez-vous vraiment supprimer {{name}} ? Cette action est irréversible.",
+    "confirm": "Supprimer",
+    "cancel": "Garder",
+    "removing": "Suppression...",
+    "biometricPrompt": "Authentifiez-vous pour supprimer le profil",
+    "usePasscode": "Utiliser le code"
   }
 }

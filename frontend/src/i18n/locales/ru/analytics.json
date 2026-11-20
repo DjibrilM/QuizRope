@@ -11,7 +11,39 @@
     "avgTime": "Сред. {{time}}с",
     "viewHistory": "История матчей",
     "noData": "Нет матчей",
-    "noDataSubtitle": "Сыграйте несколько игр, чтобы увидеть статистику!"
+    "noDataSubtitle": "Сыграйте несколько игр, чтобы увидеть статистику!",
+    "performanceBadge": {
+      "excellent": "Отлично",
+      "good": "Хороший прогресс",
+      "needsWork": "Нужна практика"
+    },
+    "report": {
+      "title": "Отчёт об обучении",
+      "strongAt": "Сильные стороны",
+      "practiceNeeded": "Нужно больше практики",
+      "practiceHint": "Уделите больше времени предмету {{subject}}, чтобы повысить точность",
+      "noWeakSubject": "Продолжайте — больше практики даст более точные выводы!",
+      "avgResponseTime": "Среднее время",
+      "avgResponseValue": "{{time}}с на вопрос",
+      "slowNote": "Отвечает вдумчиво — хорошая привычка!",
+      "fastNote": "Отвечает быстро и уверенно!",
+      "recentTrend": "Недавняя динамика",
+      "trendImproving": "Рост (+{{delta}}%)",
+      "trendDipping": "Спад (-{{delta}}%)",
+      "trendSteady": "Стабильный темп",
+      "trendComparison": "Последние матчи: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) против {{earlier}}% ранее",
+      "rushedNote": "Спешка — не торопись!",
+      "quickCheckNote": "Быстро — проверяйте ответы",
+      "slowPracticeNote": "Разобрать ошибки",
+      "practiceHintFast": "{{missed}} ошибок из {{total}} при среднем {{time}}с — читайте вопрос внимательнее.",
+      "practiceHintSlow": "{{missed}} ошибок из {{total}} ({{time}}с ср.) — разберите вместе основы предмета {{subject}}.",
+      "practiceHintClose": "{{correct}} из {{total}} верно — близко к 75%! Посмотрите ошибки вместе.",
+      "practiceHintSupport": "{{missed}} ошибок из {{total}} — попробуйте уровень проще или разберите ответы.",
+      "missedBadge": "{{missed}} ошибок · {{accuracy}}%",
+      "allOnTrack": "Все предметы от 70% — отличный стабильный прогресс!",
+      "needMoreMatches": "Сыграйте ещё несколько вопросов, чтобы увидеть динамику по предметам.",
+      "difficultyTitle": "По сложности"
+    }
   },
   "history": {
     "title": "История матчей",
@@ -19,7 +51,7 @@
     "lost": "Поражение",
     "accuracy": "Точность {{accuracy}}%",
     "noMatches": "Матчи не найдены",
-    "noMatchesSubtitle": "Этот игрок ещё не завершил ни одного матча."
+    "noMatchesSubtitle": "Этот ребёнок ещё не завершил ни одного матча."
   },
   "review": {
     "title": "Обзор матча",

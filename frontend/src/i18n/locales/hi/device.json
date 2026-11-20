@@ -7,16 +7,19 @@
     "enterCodeInstead": "कोड दर्ज करें",
     "errorToken": "चाइल्ड टोकन प्राप्त करने में विफल। पुनः प्रयास करने के लिए नीचे टैप करें।",
     "invalidCode": "अमान्य या समाप्त कोड। कृपया पुनः प्रयास करें।",
-    "connectAccount": "खाता कनेक्ट करें"
+    "connectAccount": "खाता कनेक्ट करें",
+    "linkingTo": "लिंक किया जा रहा है",
+    "scanInstruction": "अपने माता-पिता के डिवाइस पर दिख रहे QR कोड की ओर कैमरा करें।",
+    "joiningFamily": "परिवार से जुड़ रहे हैं"
   },
   "connectDevice": {
     "title": "डिवाइस कनेक्ट करें",
     "loadingTitle": "सेट हो रहा है...",
-    "loadingMessage": "खिलाड़ी लोड हो रहे हैं...",
+    "loadingMessage": "बच्चों की जानकारी लोड हो रही है...",
     "selectChildTitle": "कौन खेल रहा है?",
     "selectChildInstruction": "इस डिवाइस के लिए एक बच्चा चुनें",
     "addNewChild": "+ नया बच्चा जोड़ें",
-    "newPlayerTitle": "नया खिलाड़ी",
+    "newPlayerTitle": "नया बच्चा",
     "linkingTitle": "डिवाइस लिंक हो रहा है...",
     "settingUpSession": "{{name}} का सत्र सेट हो रहा है",
     "errorTitle": "कुछ गलत हो गया",

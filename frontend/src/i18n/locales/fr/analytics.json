@@ -11,7 +11,39 @@
     "avgTime": "Moy. {{time}}s",
     "viewHistory": "Voir l'historique",
     "noData": "Aucun match",
-    "noDataSubtitle": "Jouez des parties pour voir les stats ici !"
+    "noDataSubtitle": "Jouez des parties pour voir les stats ici !",
+    "performanceBadge": {
+      "excellent": "Excellent",
+      "good": "Bons progrès",
+      "needsWork": "À travailler"
+    },
+    "report": {
+      "title": "Bilan d’apprentissage",
+      "strongAt": "Points forts",
+      "practiceNeeded": "Besoin de pratique",
+      "practiceHint": "Consacrez plus de temps à {{subject}} pour améliorer la précision",
+      "noWeakSubject": "Continuez — plus de pratique donne de meilleurs repères !",
+      "avgResponseTime": "Temps moyen",
+      "avgResponseValue": "{{time}}s par question",
+      "slowNote": "Prend le temps de réfléchir — bonne habitude !",
+      "fastNote": "Répond vite et avec assurance !",
+      "recentTrend": "Tendance récente",
+      "trendImproving": "En progrès (+{{delta}}%)",
+      "trendDipping": "En baisse (-{{delta}}%)",
+      "trendSteady": "Rythme stable",
+      "trendComparison": "Matchs récents : {{recent}}% ({{recentCorrect}}/{{recentTotal}}) contre {{earlier}}% avant",
+      "rushedNote": "Trop vite — ralentis !",
+      "quickCheckNote": "Rapide — relis bien",
+      "slowPracticeNote": "Revoir les erreurs",
+      "practiceHintFast": "{{missed}} erreurs sur {{total}} à {{time}}s en moy. — prenez le temps de bien lire.",
+      "practiceHintSlow": "{{missed}} erreurs sur {{total}} ({{time}}s moy.) — révisez ensemble les bases en {{subject}}.",
+      "practiceHintClose": "{{correct}} sur {{total}} réussies — proche des 75% ! Revoyez les erreurs ensemble.",
+      "practiceHintSupport": "{{missed}} erreurs sur {{total}} — essayez un niveau plus simple ou revoyez les réponses.",
+      "missedBadge": "{{missed}} ratées · {{accuracy}}%",
+      "allOnTrack": "Toutes les matières sont à 70%+ — belle progression !",
+      "needMoreMatches": "Jouez encore quelques questions pour voir les tendances par matière.",
+      "difficultyTitle": "Par difficulté"
+    }
   },
   "history": {
     "title": "Historique des matchs",
@@ -19,7 +51,7 @@
     "lost": "Perdu",
     "accuracy": "{{accuracy}}% de précision",
     "noMatches": "Aucun match trouvé",
-    "noMatchesSubtitle": "Ce joueur n'a pas encore terminé de match."
+    "noMatchesSubtitle": "Cet enfant n’a pas encore terminé de match."
   },
   "review": {
     "title": "Revue du match",

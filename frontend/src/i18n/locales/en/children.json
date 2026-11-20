@@ -7,8 +7,8 @@
   "ageGrade": "Age {{age}} - Grade {{grade}}",
   "ageGradeAccessibility": "{{name}}, age {{age}}, grade {{grade}}",
   "removeAccessibility": "Remove {{name}}",
-  "emptyTitle": "No players yet!",
-  "emptySubtitle": "Add your first young quizzer to start the fun",
+  "emptyTitle": "No kids yet",
+  "emptySubtitle": "Add your first kid to get started",
   "form": {
     "namePlaceholder": "Child's name",
     "agePlaceholder": "Age",
@@ -22,7 +22,7 @@
     "gradeRequired": "Grade is required"
   },
   "remove": {
-    "title": "Remove Player?",
+    "title": "Remove Child?",
     "message": "Are you sure you want to remove {{name}}? This can't be undone.",
     "confirm": "Remove",
     "cancel": "Keep",
@@ -41,6 +41,27 @@
     "ok": "Got It",
     "generateNew": "Generate New Code",
     "errorTitle": "Failed to Generate Code",
-    "errorBody": "Something went wrong. Please try again."
+    "errorBody": "Something went wrong. Please try again.",
+    "connectedDevice": "{{name}}’s device is now linked!",
+    "shareMessage": "Use code {{code}} in QuizRope to link {{name}}’s device.",
+    "linkedStatus": "Linked",
+    "unlinkedStatus": "Not linked",
+    "linkChildAccessibility": "Manage device link for {{name}}",
+    "manageTitle": "Device Link",
+    "manageSubtitle": "{{name}} is linked to a device. Generate a new code to connect another device, or unlink to sign out without deleting progress.",
+    "getNewCode": "Get New Link Code",
+    "unlinkDevice": "Unlink Device",
+    "unlinkConfirmTitle": "Unlink {{name}}’s device?",
+    "unlinkConfirmBody": "Their device will be signed out. Quiz history and homework stay saved on your account.",
+    "unlinkConfirmCta": "Unlink",
+    "unlinking": "Unlinking...",
+    "unlinkError": "Could not unlink device. Please try again.",
+    "stepOne": "1. As a Guest, tap Link to Parent (or tap I’m a Player)",
+    "stepTwo": "2. Scan this QR code or type the 6-character code",
+    "inviteGuestTitle": "Invite a Guest Kid",
+    "inviteGuestDesc": "Create a 1-minute code to import their guest name & progress",
+    "familyInviteTitle": "Family Hub Invite",
+    "autoRefreshing": "Generating a fresh code...",
+    "connectedGuest": "Joined your Family Hub!"
   }
 }

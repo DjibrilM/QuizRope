@@ -11,7 +11,11 @@
     "tryAgain": "もう一度試す",
     "close": "閉じる",
     "grantPermission": "許可する",
-    "link": "リンク"
+    "link": "リンク",
+    "copy": "コピー",
+    "copied": "コピー済み",
+    "paste": "貼り付け",
+    "share": "共有"
   },
   "labels": {
     "or": "または",
@@ -93,5 +97,17 @@
     "blue": "青",
     "redTeam": "赤チーム",
     "blueTeam": "青チーム"
+  },
+  "parentProfile": {
+    "title": "保護者プロフィール",
+    "badge": "保護者アカウント",
+    "familyOverview": "ファミリー概要",
+    "kids": "お子様",
+    "quizzes": "クイズ",
+    "homework": "宿題",
+    "manageKids": "お子様プロフィール管理",
+    "tapAvatarHint": "タップしてアバターを変更",
+    "useGooglePhoto": "Google写真を使う",
+    "noKidsYet": "お子様のプロフィールはまだありません"
   }
 }

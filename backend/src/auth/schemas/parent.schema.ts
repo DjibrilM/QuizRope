@@ -28,6 +28,12 @@ export class Parent extends Document {
   displayName: string;
 
   @Prop({ default: '' })
+  avatarUrl: string;
+
+  @Prop({ default: '' })
+  googlePhotoUrl: string;
+
+  @Prop({ default: '' })
   firebaseUid: string;
 
   @Prop({ type: [Types.ObjectId], ref: 'Child', default: [] })

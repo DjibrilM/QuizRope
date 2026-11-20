@@ -11,7 +11,39 @@
     "avgTime": "औसत {{time}}s",
     "viewHistory": "मैच इतिहास देखें",
     "noData": "कोई मैच नहीं",
-    "noDataSubtitle": "आंकड़े देखने के लिए कुछ गेम खेलें!"
+    "noDataSubtitle": "आंकड़े देखने के लिए कुछ गेम खेलें!",
+    "performanceBadge": {
+      "excellent": "उत्कृष्ट",
+      "good": "अच्छी प्रगति",
+      "needsWork": "अभ्यास की आवश्यकता"
+    },
+    "report": {
+      "title": "लर्निंग रिपोर्ट",
+      "strongAt": "मज़बूत विषय",
+      "practiceNeeded": "अधिक अभ्यास आवश्यक",
+      "practiceHint": "सटीकता बढ़ाने के लिए {{subject}} पर अतिरिक्त समय दें",
+      "noWeakSubject": "जारी रखें — अधिक अभ्यास से बेहतर जानकारी मिलेगी!",
+      "avgResponseTime": "औसत समय",
+      "avgResponseValue": "प्रति प्रश्न {{time}}s",
+      "slowNote": "सोच-समझकर उत्तर — अच्छी आदत!",
+      "fastNote": "तेज़ और आत्मविश्वास से उत्तर!",
+      "recentTrend": "हालिया रुझान",
+      "trendImproving": "सुधार (+{{delta}}%)",
+      "trendDipping": "गिरावट (-{{delta}}%)",
+      "trendSteady": "स्थिर गति",
+      "trendComparison": "हाल के मैच: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) बनाम पहले {{earlier}}%",
+      "rushedNote": "जल्दबाज़ी — धीरे पढ़ें!",
+      "quickCheckNote": "तेज़ — उत्तर जांचें",
+      "slowPracticeNote": "गलत उत्तर दोहराएं",
+      "practiceHintFast": "औसत {{time}}s में {{total}} में से {{missed}} गलत — आराम से पूरा सवाल पढ़ें।",
+      "practiceHintSlow": "{{total}} में से {{missed}} गलत ({{time}}s औसत) — साथ में {{subject}} के मूल नियम दोहराएं।",
+      "practiceHintClose": "{{total}} में से {{correct}} सही — 75% के करीब! छूटे सवाल साथ देखें।",
+      "practiceHintSupport": "{{total}} में से {{missed}} गलत — आसान स्तर चुनें या गलत उत्तर देखें।",
+      "missedBadge": "{{missed}} गलत · {{accuracy}}%",
+      "allOnTrack": "सभी विषयों में 70%+ — शानदार लगातार प्रगति!",
+      "needMoreMatches": "विषयों के रुझान देखने के लिए कुछ और प्रश्न खेलें।",
+      "difficultyTitle": "कठिनाई के अनुसार"
+    }
   },
   "history": {
     "title": "मैच इतिहास",
@@ -19,7 +51,7 @@
     "lost": "हारा",
     "accuracy": "{{accuracy}}% सटीकता",
     "noMatches": "कोई मैच नहीं मिला",
-    "noMatchesSubtitle": "इस खिलाड़ी ने अभी तक कोई मैच पूरा नहीं किया है।"
+    "noMatchesSubtitle": "इस बच्चे ने अभी तक कोई मैच पूरा नहीं किया है।"
   },
   "review": {
     "title": "मैच समीक्षा",

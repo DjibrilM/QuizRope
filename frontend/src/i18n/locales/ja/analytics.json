@@ -11,7 +11,39 @@
     "avgTime": "平均 {{time}}秒",
     "viewHistory": "対戦履歴を見る",
     "noData": "対戦記録なし",
-    "noDataSubtitle": "ゲームをプレイすると統計が表示されます！"
+    "noDataSubtitle": "ゲームをプレイすると統計が表示されます！",
+    "performanceBadge": {
+      "excellent": "素晴らしい",
+      "good": "順調な進歩",
+      "needsWork": "練習が必要"
+    },
+    "report": {
+      "title": "学習レポート",
+      "strongAt": "得意な教科",
+      "practiceNeeded": "もっと練習が必要",
+      "practiceHint": "正答率を上げるために{{subject}}に時間をかけましょう",
+      "noWeakSubject": "その調子 — 続けるほど傾向が見えてきます！",
+      "avgResponseTime": "平均回答時間",
+      "avgResponseValue": "1問あたり {{time}}秒",
+      "slowNote": "じっくり考えています — 良い習慣です！",
+      "fastNote": "素早く自信を持って回答しています！",
+      "recentTrend": "最近の傾向",
+      "trendImproving": "上昇中 (+{{delta}}%)",
+      "trendDipping": "低下 (-{{delta}}%)",
+      "trendSteady": "安定ペース",
+      "trendComparison": "直近の対戦: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) / 以前 {{earlier}}%",
+      "rushedNote": "早すぎます — ゆっくり読もう！",
+      "quickCheckNote": "速い — 見直しも大切",
+      "slowPracticeNote": "間違えた問題を復習",
+      "practiceHintFast": "平均 {{time}}秒で {{total}}問中 {{missed}}問ミス — 落ち着いて問題文を読みましょう。",
+      "practiceHintSlow": "{{total}}問中 {{missed}}問ミス（平均 {{time}}秒） — 一緒に{{subject}}の基礎を復習しましょう。",
+      "practiceHintClose": "{{total}}問中 {{correct}}問正解 — あと少しで75%！間違えた問題を振り返りましょう。",
+      "practiceHintSupport": "{{total}}問中 {{missed}}問ミス — やさしい難易度を試すか答えを見直しましょう。",
+      "missedBadge": "{{missed}}問ミス · {{accuracy}}%",
+      "allOnTrack": "全教科が70%以上 — 順調に進歩しています！",
+      "needMoreMatches": "教科ごとの傾向を見るにはもう少しプレイしましょう。",
+      "difficultyTitle": "難易度別"
+    }
   },
   "history": {
     "title": "対戦履歴",
@@ -19,7 +51,7 @@
     "lost": "敗北",
     "accuracy": "正答率 {{accuracy}}%",
     "noMatches": "対戦が見つかりません",
-    "noMatchesSubtitle": "このプレイヤーはまだ対戦を完了していません。"
+    "noMatchesSubtitle": "この子どもはまだ対戦を完了していません。"
   },
   "review": {
     "title": "対戦レビュー",

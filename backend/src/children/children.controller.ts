@@ -21,6 +21,14 @@ export class ChildrenController {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
+  private getParentId(req: any): string {
+    const id = req.user?._id ?? req.user?.id;
+    if (!id) {
+      throw new ForbiddenException('Parents only');
+    }
+    return id.toString();
+  }
+
   @Post()
   @UseGuards(FirebaseAuthGuard)
   async createChild(
@@ -28,32 +36,46 @@ export class ChildrenController {
     @Body() body: { displayName: string; grade: string; avatarUrl?: string },
   ) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
-    return this.childrenService.createChild(req.user._id, body);
+    return this.childrenService.createChild(this.getParentId(req), body);
   }
 
   @Get()
   @UseGuards(FirebaseAuthGuard)
   async getChildren(@Req() req) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
-    return this.childrenService.getChildrenByParent(req.user._id);
+    return this.childrenService.getChildrenByParent(this.getParentId(req));
   }
 
   @Delete(':id')
   @UseGuards(FirebaseAuthGuard)
   async deleteChild(@Req() req, @Param('id') id: string) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
-    const child = await this.childrenService.deleteChild(req.user._id, id);
+    const child = await this.childrenService.deleteChild(
+      this.getParentId(req),
+      id,
+    );
     if (!child) {
       throw new NotFoundException('Child not found');
     }
     return { success: true };
   }
 
+  @Post(':id/unlink')
+  @UseGuards(FirebaseAuthGuard)
+  async unlinkChildDevices(@Req() req, @Param('id') id: string) {
+    if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
+    const child = await this.childrenService.unlinkChildDevices(
+      this.getParentId(req),
+      id,
+    );
+    return { success: true, child };
+  }
+
   @Post('qr-session')
   @UseGuards(FirebaseAuthGuard)
   async createQRSession(@Req() req) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
-    return this.childrenService.createQRSession(req.user._id);
+    return this.childrenService.createQRSession(this.getParentId(req));
   }
 
   @Post('link')
@@ -93,9 +115,10 @@ export class ChildrenController {
     @Body() body: { sessionToken: string; childId?: string },
   ) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
+    const parentId = this.getParentId(req);
     const session = await this.childrenService.authorizeSession(
       body.sessionToken,
-      req.user._id.toString(),
+      parentId,
       body.childId,
     );
 
@@ -105,7 +128,7 @@ export class ChildrenController {
 
     // Emit real-time event to the child's device
     this.realtimeGateway.emitSessionAuthorized(body.sessionToken, {
-      parentId: req.user._id.toString(),
+      parentId,
       childId: body.childId || null,
     });
 
@@ -115,22 +138,29 @@ export class ChildrenController {
   // --- Guest link code endpoints ---
 
   /**
-   * Parent calls this to generate a short code for a specific child.
-   * The kid enters this code in the app to link their guest profile.
+   * Parent calls this to generate a 1-minute invitation code + QR for either
+   * a specific child profile or any guest device joining their Family Hub.
    */
   @Post('guest-link')
   @UseGuards(FirebaseAuthGuard)
   async generateGuestLinkCode(
     @Req() req,
-    @Body() body: { childId: string },
+    @Body() body: { childId?: string },
   ) {
     if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
-    if (!body.childId) {
-      throw new NotFoundException('childId is required');
-    }
     return this.childrenService.generateGuestLinkCode(
-      req.user._id.toString(),
-      body.childId,
+      this.getParentId(req),
+      body?.childId,
+    );
+  }
+
+  @Get('guest-link/:code/status')
+  @UseGuards(FirebaseAuthGuard)
+  async getGuestLinkStatus(@Req() req, @Param('code') code: string) {
+    if (req.user.role !== 'parent') throw new ForbiddenException('Parents only');
+    return this.childrenService.getGuestLinkStatus(
+      this.getParentId(req),
+      code,
     );
   }
 

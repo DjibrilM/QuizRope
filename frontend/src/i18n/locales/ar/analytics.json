@@ -11,7 +11,39 @@
     "avgTime": "متوسط {{time}}ث",
     "viewHistory": "عرض سجل المباريات",
     "noData": "لا توجد مباريات",
-    "noDataSubtitle": "العب بعض المباريات لرؤية الإحصائيات هنا!"
+    "noDataSubtitle": "العب بعض المباريات لرؤية الإحصائيات هنا!",
+    "performanceBadge": {
+      "excellent": "ممتاز",
+      "good": "تقدم جيد",
+      "needsWork": "يحتاج إلى تدريب"
+    },
+    "report": {
+      "title": "تقرير التعلّم",
+      "strongAt": "نقاط القوة",
+      "practiceNeeded": "يحتاج إلى تدريب إضافي",
+      "practiceHint": "خصّص وقتًا إضافيًا لمادة {{subject}} لتحسين الدقة",
+      "noWeakSubject": "واصل التقدم — المزيد من التدريب يعطي نتائج أوضح!",
+      "avgResponseTime": "متوسط الاستجابة",
+      "avgResponseValue": "{{time}} ث لكل سؤال",
+      "slowNote": "يفكر بتأنٍ — عادة جيدة!",
+      "fastNote": "يجيب بسرعة وثقة!",
+      "recentTrend": "الاتجاه الأخير",
+      "trendImproving": "تحسن (+{{delta}}%)",
+      "trendDipping": "تراجع (-{{delta}}%)",
+      "trendSteady": "وتيرة ثابتة",
+      "trendComparison": "المباريات الأخيرة: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) مقابل {{earlier}}% سابقًا",
+      "rushedNote": "يتسرع — تمهّل أكثر!",
+      "quickCheckNote": "سريع — راجع الإجابات",
+      "slowPracticeNote": "راجع الخطوات الفائتة",
+      "practiceHintFast": "أخطأ في {{missed}} من {{total}} بمتوسط {{time}} ث — تمهّل واقرأ السؤال جيدًا.",
+      "practiceHintSlow": "أخطأ في {{missed}} من {{total}} (متوسط {{time}} ث) — راجعا أساسيات {{subject}} معًا.",
+      "practiceHintClose": "أجاب عن {{correct}} من {{total}} بشكل صحيح — قريب من 75%! راجعا الأخطاء معًا.",
+      "practiceHintSupport": "أخطأ في {{missed}} من {{total}} — جرّبا مستوى أسهل أو راجعا الأسئلة الفائتة.",
+      "missedBadge": "{{missed}} أخطاء · {{accuracy}}%",
+      "allOnTrack": "جميع المواد فوق 70% — تقدم رائع ومستمر!",
+      "needMoreMatches": "العب بضعة أسئلة إضافية لاكتشاف اتجاهات المواد.",
+      "difficultyTitle": "حسب الصعوبة"
+    }
   },
   "history": {
     "title": "سجل المباريات",
@@ -19,7 +51,7 @@
     "lost": "خسر",
     "accuracy": "دقة {{accuracy}}%",
     "noMatches": "لم يتم العثور على مباريات",
-    "noMatchesSubtitle": "هذا اللاعب لم يكمل أي مباراة بعد."
+    "noMatchesSubtitle": "هذا الطفل لم يكمل أي مباراة بعد."
   },
   "review": {
     "title": "مراجعة المباراة",

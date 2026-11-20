@@ -10,9 +10,9 @@ export class GuestLink extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Parent', required: true })
   parentId: Types.ObjectId;
 
-  /** The specific child profile this code will link to. */
-  @Prop({ type: Types.ObjectId, ref: 'Child', required: true })
-  childId: Types.ObjectId;
+  /** Optional child profile ID; null for general Family Hub guest invitations. */
+  @Prop({ type: Types.ObjectId, ref: 'Child', default: null })
+  childId: Types.ObjectId | null;
 
   @Prop({ required: true })
   expiresAt: Date;

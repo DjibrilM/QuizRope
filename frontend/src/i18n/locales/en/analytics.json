@@ -26,7 +26,23 @@
       "avgResponseTime": "Avg Response",
       "avgResponseValue": "{{time}}s per question",
       "slowNote": "Taking time to think — good habit!",
-      "fastNote": "Answering quickly and confidently!"
+      "fastNote": "Answering quickly and confidently!",
+      "recentTrend": "Recent Trend",
+      "trendImproving": "Improving (+{{delta}}%)",
+      "trendDipping": "Dropping (-{{delta}}%)",
+      "trendSteady": "Steady Pace",
+      "trendComparison": "Recent matches: {{recent}}% ({{recentCorrect}}/{{recentTotal}}) vs {{earlier}}% earlier",
+      "rushedNote": "Rushing — slow down!",
+      "quickCheckNote": "Fast — check answers",
+      "slowPracticeNote": "Review missed steps",
+      "practiceHintFast": "Missed {{missed}} of {{total}} at {{time}}s avg — slow down and read carefully.",
+      "practiceHintSlow": "Missed {{missed}} of {{total}} ({{time}}s avg) — review core {{subject}} steps together.",
+      "practiceHintClose": "Got {{correct}} of {{total}} right — close to 75%! Review missed answers together.",
+      "practiceHintSupport": "Missed {{missed}} of {{total}} — try an easier round or review missed questions.",
+      "missedBadge": "{{missed}} missed · {{accuracy}}%",
+      "allOnTrack": "All subjects are at 70%+ — great steady progress!",
+      "needMoreMatches": "Play a few more questions to uncover subject trends.",
+      "difficultyTitle": "By Difficulty"
     }
   },
   "history": {
@@ -35,7 +51,7 @@
     "lost": "Lost",
     "accuracy": "{{accuracy}}% accuracy",
     "noMatches": "No matches found",
-    "noMatchesSubtitle": "This player hasn't completed any matches yet."
+    "noMatchesSubtitle": "This child hasn’t completed any matches yet."
   },
   "review": {
     "title": "Match Review",

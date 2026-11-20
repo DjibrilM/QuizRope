@@ -37,15 +37,7 @@ export function SubjectStatRow({
   return (
     <View style={styles.subjectCard}>
       <View style={styles.subjectTopRow}>
-        <View style={styles.subjectLabelRow}>
-          <View
-            style={[
-              styles.subjectDot,
-              { backgroundColor: theme.accentColor },
-            ]}
-          />
-          <Text style={styles.subjectTitle}>{subjectLabel}</Text>
-        </View>
+        <Text style={styles.subjectTitle}>{subjectLabel}</Text>
         <View style={styles.accuracyPill}>
           <Text style={styles.accuracyPillText}>{accuracy}%</Text>
         </View>
@@ -80,9 +72,11 @@ export function SubjectStatRow({
 type MatchRowItem = {
   matchId: string;
   subject: string;
+  difficulty?: string;
   date: string | number | Date;
   gameMode: string;
   accuracy: number;
+  avgResponseTime?: number;
   didWin: boolean;
   correctAnswers?: number;
   totalQuestions?: number;
@@ -105,21 +99,39 @@ export function MatchHistoryRow({
     month: "short",
     day: "numeric",
   });
+  const difficultyLabel = summary.difficulty
+    ? t(`common:difficulties.${summary.difficulty.toLowerCase()}`, {
+        defaultValue: summary.difficulty,
+      })
+    : null;
   const isSolo = summary.gameMode === "solo";
   const outcomeColor = summary.didWin ? UI_COLORS.mint : UI_COLORS.coral;
   const hasCounts =
     typeof summary.correctAnswers === "number" &&
     typeof summary.totalQuestions === "number" &&
     summary.totalQuestions > 0;
-  const metaText = hasCounts
-    ? `${date} · ${t("analytics:dashboard.correct", {
-        correct: summary.correctAnswers,
-        total: summary.totalQuestions,
-      })}`
-    : `${date} · ${t("analytics:history.accuracy", {
-        accuracy: summary.accuracy,
-      })}`;
-  const isHighAccuracy = summary.accuracy >= 70;
+  const metaParts = [date];
+  if (difficultyLabel) metaParts.push(difficultyLabel);
+  metaParts.push(
+    hasCounts
+      ? t("analytics:dashboard.correct", {
+          correct: summary.correctAnswers,
+          total: summary.totalQuestions,
+        })
+      : t("analytics:history.accuracy", {
+          accuracy: summary.accuracy,
+        }),
+  );
+  if (summary.avgResponseTime && summary.avgResponseTime > 0) {
+    metaParts.push(`${(summary.avgResponseTime / 1000).toFixed(1)}s`);
+  }
+  const metaText = metaParts.join(" · ");
+  const accuracyPillColors =
+    summary.accuracy >= 75
+      ? { bg: "rgba(52, 211, 153, 0.14)", text: UI_COLORS.mint }
+      : summary.accuracy >= 50
+        ? { bg: "rgba(251, 191, 36, 0.14)", text: UI_COLORS.amber }
+        : { bg: "rgba(232, 93, 117, 0.14)", text: UI_COLORS.coral };
 
   const rowContent = (
     <>
@@ -151,13 +163,13 @@ export function MatchHistoryRow({
         <View
           style={[
             styles.accuracyPill,
-            isHighAccuracy && styles.accuracyPillHigh,
+            { backgroundColor: accuracyPillColors.bg },
           ]}
         >
           <Text
             style={[
               styles.accuracyPillText,
-              isHighAccuracy && { color: UI_COLORS.mint },
+              { color: accuracyPillColors.text },
             ]}
           >
             {summary.accuracy}%
@@ -513,16 +525,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  subjectLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  subjectDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
   },
   subjectTitle: {
     fontFamily: FONTS.bodyExtraBold,

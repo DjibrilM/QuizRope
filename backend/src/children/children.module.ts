@@ -8,6 +8,7 @@ import {
   DeviceSessionSchema,
 } from './schemas/device-session.schema';
 import { GuestLink, GuestLinkSchema } from './schemas/guest-link.schema';
+import { Parent, ParentSchema } from '../auth/schemas/parent.schema';
 import { AuthModule } from '../auth/auth.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { MatchModule } from '../match/match.module';
@@ -20,6 +21,7 @@ import { NotificationAiService } from './notification-ai.service';
       { name: Child.name, schema: ChildSchema },
       { name: DeviceSession.name, schema: DeviceSessionSchema },
       { name: GuestLink.name, schema: GuestLinkSchema },
+      { name: Parent.name, schema: ParentSchema },
     ]),
     forwardRef(() => AuthModule),
     forwardRef(() => RealtimeModule),

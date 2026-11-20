@@ -154,7 +154,7 @@ export class NotificationService {
       content: {
         title: `Weekly Review 📊`,
         body: `Let's see how much you learned this week! Check your progress.`,
-        data: { screen: '/profile' },
+        data: { screen: '/kid-profile' },
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.WEEKLY,

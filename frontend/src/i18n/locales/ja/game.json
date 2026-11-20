@@ -11,7 +11,13 @@
   "result": {
     "correct": "正解！",
     "wrong": "不正解！",
-    "encouragement": ["おしい！", "いい線！", "その調子！", "あと少し！", "がんばった！"],
+    "encouragement": [
+      "おしい！",
+      "いい線！",
+      "その調子！",
+      "あと少し！",
+      "がんばった！"
+    ],
     "ropeMovesLeft": "ロープが左に移動",
     "ropeMovesRight": "ロープが右に移動"
   },

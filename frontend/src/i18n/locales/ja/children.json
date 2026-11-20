@@ -5,8 +5,8 @@
   "chooseAvatar": "アバターを選ぶ",
   "ageGrade": "{{age}}歳 - {{grade}}年生",
   "ageGradeAccessibility": "{{name}}、{{age}}歳、{{grade}}年生",
-  "emptyTitle": "プレイヤーがまだいません！",
-  "emptySubtitle": "最初のクイズプレイヤーを追加して楽しもう",
+  "emptyTitle": "まだ子どもがいません",
+  "emptySubtitle": "最初のお子さんを追加して始めましょう",
   "form": {
     "namePlaceholder": "お子様の名前",
     "agePlaceholder": "年齢",
@@ -29,6 +29,36 @@
     "expired": "コードの有効期限が切れました",
     "ok": "わかりました",
     "errorTitle": "コードの生成に失敗",
-    "errorBody": "問題が発生しました。もう一度お試しください。"
+    "errorBody": "問題が発生しました。もう一度お試しください。",
+    "connectedDevice": "{{name}}のデバイスがリンクされました！",
+    "shareMessage": "{{name}}のデバイスをリンクするには、QuizRopeでコード「{{code}}」を使用してください。",
+    "linkedStatus": "リンク済み",
+    "unlinkedStatus": "未リンク",
+    "linkChildAccessibility": "{{name}}のデバイスリンクを管理",
+    "manageTitle": "デバイスリンク",
+    "manageSubtitle": "{{name}}はデバイスにリンクされています。別の端末をつなぐには新しいコードを発行するか、履歴を残したままリンクを解除できます。",
+    "getNewCode": "新しいリンクコードを取得",
+    "unlinkDevice": "デバイスのリンクを解除",
+    "unlinkConfirmTitle": "{{name}}のデバイスを解除しますか？",
+    "unlinkConfirmBody": "お子様の端末からログアウトされます。クイズ履歴や宿題はアカウントに保存されたままです。",
+    "unlinkConfirmCta": "解除する",
+    "unlinking": "解除中...",
+    "unlinkError": "リンクを解除できませんでした。もう一度お試しください。",
+    "stepOne": "1. ゲスト画面で「保護者とリンク」（またはプレイヤー）をタップ",
+    "stepTwo": "2. このQRコードを読み取るか6桁のコードを入力",
+    "inviteGuestTitle": "ゲストをファミリーに招待",
+    "inviteGuestDesc": "ゲスト名と進捗を引き継ぐ1分間有効なコードを作成",
+    "familyInviteTitle": "ファミリーハブ招待",
+    "autoRefreshing": "新しいコードを生成中...",
+    "connectedGuest": "ファミリーハブに参加しました！"
+  },
+  "remove": {
+    "title": "子どもを削除しますか？",
+    "message": "{{name}} を削除してもよろしいですか？この操作は元に戻せません。",
+    "confirm": "削除",
+    "cancel": "残す",
+    "removing": "削除中...",
+    "biometricPrompt": "プロフィールを削除するには認証してください",
+    "usePasscode": "パスコードを使用"
   }
 }

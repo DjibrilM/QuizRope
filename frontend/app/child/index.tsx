@@ -1,31 +1,40 @@
 import {
-  View,
+  Platform,
   ScrollView,
-  Pressable,
+  StyleSheet,
   Text,
-  Alert,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useRef, useCallback, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePortrait } from "../../src/hooks/useOrientation";
 import { useGameStore } from "../../src/stores/gameStore";
-import { AnimatedLoader, Button, ScreenHeader } from "../../src/components/common";
+import {
+  AnimatedLoader,
+  ScreenHeader,
+  StaggeredList,
+} from "../../src/components/common";
 import {
   AddChildForm,
   ChildCard,
   EmptyChildrenState,
+  ParentDeviceLinkSheet,
+  type ParentDeviceLinkSheetRef,
+  type ParentDeviceLinkTarget,
 } from "../../src/components/children";
-import { QRCodeDisplay, SessionCodeDisplay } from "../../src/components/device";
 import {
   FloatingBottomSheet,
   FloatingBottomSheetScrollView,
   FloatingBottomSheetView,
+  PillButton,
   type FloatingBottomSheetRef,
 } from "../../src/components/ui";
 import { useTranslation } from "react-i18next";
-import { FONTS } from "../../src/constants/theme";
+import { FONTS, UI_COLORS, UI_RADII } from "../../src/constants/theme";
 import { getHeadingFont } from "../../src/utils/fontForLocale";
 import { apiService } from "../../src/services/api";
 import { hapticsService } from "../../src/services/haptics";
@@ -33,32 +42,22 @@ import * as LocalAuthentication from "expo-local-authentication";
 
 export default function ChildrenScreen() {
   usePortrait();
-  const { t } = useTranslation("children");
+  const { t } = useTranslation(["children", "common"]);
   const { setChildren } = useGameStore();
   const queryClient = useQueryClient();
   const bottomSheetRef = useRef<FloatingBottomSheetRef>(null);
   const confirmSheetRef = useRef<FloatingBottomSheetRef>(null);
   const selectChildSheetRef = useRef<FloatingBottomSheetRef>(null);
-  const codeSheetRef = useRef<FloatingBottomSheetRef>(null);
+  const linkSheetRef = useRef<ParentDeviceLinkSheetRef>(null);
   const [removingChild, setRemovingChild] = useState<{
     id: string;
     displayName: string;
   } | null>(null);
-  const [codeResult, setCodeResult] = useState<{
-    code: string;
-    expiresAt: string;
-  } | null>(null);
-  const [codeForChildName, setCodeForChildName] = useState("");
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [selectedChildForCode, setSelectedChildForCode] = useState<string | null>(
-    null,
-  );
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     data: children = [],
     isLoading,
+    isFetched,
     error,
   } = useQuery({
     queryKey: ["children"],
@@ -68,10 +67,10 @@ export default function ChildrenScreen() {
   });
 
   useEffect(() => {
-    if (children.length > 0) {
+    if (isFetched) {
       setChildren(children);
     }
-  }, [children]);
+  }, [isFetched, children, setChildren]);
 
   const addMutation = useMutation({
     mutationFn: (data: {
@@ -133,19 +132,21 @@ export default function ChildrenScreen() {
   const handleConfirmRemove = async () => {
     if (!removingChild) return;
 
-    // Check if biometric/passcode hardware is available
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
     if (hasHardware && isEnrolled) {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: t("remove.biometricPrompt", "Authenticate to delete profile"),
+        promptMessage: t(
+          "remove.biometricPrompt",
+          "Authenticate to delete profile",
+        ),
         fallbackLabel: t("remove.usePasscode", "Use Passcode"),
         disableDeviceFallback: false,
       });
 
       if (!result.success) {
-        return; // User cancelled or failed auth
+        return;
       }
     }
 
@@ -157,172 +158,131 @@ export default function ChildrenScreen() {
     setRemovingChild(null);
   }, []);
 
-  // Start countdown whenever a new code is generated
-  useEffect(() => {
-    if (!codeResult) return;
-    if (countdownRef.current) clearInterval(countdownRef.current);
-
-    const tick = () => {
-      const remaining = Math.max(
-        0,
-        Math.round((new Date(codeResult.expiresAt).getTime() - Date.now()) / 1000),
-      );
-      setSecondsLeft(remaining);
-      if (remaining === 0 && countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-    };
-    tick();
-    countdownRef.current = setInterval(tick, 1000);
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, [codeResult]);
-
-  const handleSelectChildForCode = useCallback(
-    async (child: { id: string; displayName: string }) => {
-      setSelectedChildForCode(child.id);
+  const openLinkSheetForChild = useCallback(
+    (child: ParentDeviceLinkTarget) => {
       selectChildSheetRef.current?.dismiss();
-      setIsGeneratingCode(true);
-      setCodeForChildName(child.displayName);
-      try {
-        const result = await apiService.generateGuestLinkCode(child.id);
-        setCodeResult(result);
-        hapticsService.success();
-        codeSheetRef.current?.present();
-      } catch {
-        Alert.alert(t("linkCode.errorTitle"), t("linkCode.errorBody"));
-      } finally {
-        setIsGeneratingCode(false);
-      }
+      linkSheetRef.current?.openForChild(child);
     },
-    [t],
+    [],
   );
 
-  const handleRegenerateCode = useCallback(async () => {
-    if (!selectedChildForCode) return;
-    setIsGeneratingCode(true);
-    try {
-      const result =
-        await apiService.generateGuestLinkCode(selectedChildForCode);
-      setCodeResult(result);
-      hapticsService.success();
-    } catch {
-      Alert.alert(t("linkCode.errorTitle"), t("linkCode.errorBody"));
-    } finally {
-      setIsGeneratingCode(false);
-    }
-  }, [selectedChildForCode, t]);
+  const visibleChildren = children.filter((c: any) => c?.displayName);
+  const hasChildren = visibleChildren.length > 0;
 
-  const hasChildren = children.filter((c) => c?.displayName).length > 0;
+  const handleGetCodePress = useCallback(() => {
+    hapticsService.selection();
+    if (visibleChildren.length === 0) {
+      linkSheetRef.current?.openFamilyInvite();
+      return;
+    }
+    selectChildSheetRef.current?.present();
+  }, [visibleChildren.length]);
 
   return (
-    <SafeAreaView edges={["bottom"]} className="flex-1 bg-game-bg">
+    <SafeAreaView edges={["bottom"]} style={styles.root}>
       <ScreenHeader
         title={t("title")}
         rightElement={
-          <Pressable
-            onPress={handleOpenSheet}
-            style={{
-              backgroundColor: "#6D4C8A",
-              paddingHorizontal: 14,
-              paddingVertical: 7,
-              borderRadius: 10,
+          <TouchableOpacity
+            onPress={() => {
+              hapticsService.selection();
+              handleOpenSheet();
             }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t("addNewPlayer")}
+            style={[
+              styles.headerAddPill,
+              Platform.OS === "ios" && styles.headerAddPillBare,
+            ]}
           >
-            <Text
-              style={{
-                color: "#FFFFFF",
-                fontSize: 12,
-                fontFamily: "Bungee_400Regular",
-              }}
-            >
-              {t("addButton")}
-            </Text>
-          </Pressable>
+            <Ionicons name="add" size={16} color={UI_COLORS.textPrimary} />
+            <Text style={styles.headerAddText}>{t("addButton")}</Text>
+          </TouchableOpacity>
         }
       />
 
       <ScrollView
-        className="flex-1 px-6 pt-6"
+        style={styles.scroll}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{
-          paddingBottom: hasChildren ? 120 : 40,
-        }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 116 },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        {errorMessage && (
-          <View className="bg-red-500/20 rounded-xl px-4 py-3 mb-4">
-            <Text
-              style={{ color: "#F87171", fontSize: 13, fontFamily: FONTS.body }}
-            >
-              {errorMessage}
-            </Text>
-          </View>
-        )}
-        {isLoading && children.length === 0 ? (
-          <View className="flex-1 items-center justify-center pt-20">
-            <AnimatedLoader />
-          </View>
-        ) : children.filter(Boolean).length === 0 ? (
-          <EmptyChildrenState />
-        ) : (
-          <View className="gap-4">
-            {children
-              .filter((c) => c?.displayName)
-              .map((child) => (
-                <View key={child.id}>
-                  <ChildCard
-                    displayName={child.displayName}
-                    grade={child.grade}
-                    avatarUrl={child.avatarUrl}
-                    onPress={() => {
-                      router.push({
-                        pathname: "/child/stats" as any,
-                        params: {
-                          childId: child.id,
-                          childName: child.displayName,
-                          avatarUrl: child.avatarUrl,
-                        },
-                      });
-                    }}
-                    onRemove={() =>
-                      handleRemovePress({
-                        id: child.id,
-                        displayName: child.displayName,
-                      })
+        <View style={styles.mainColumn}>
+          {errorMessage ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={17} color={UI_COLORS.coral} />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+
+          {isLoading && children.length === 0 ? (
+            <View style={styles.loaderWrap}>
+              <AnimatedLoader size="lg" />
+            </View>
+          ) : !hasChildren ? (
+            <EmptyChildrenState />
+          ) : (
+            <View style={styles.listShell}>
+              <StaggeredList staggerMs={55}>
+                {visibleChildren.map((child: any, idx: number) => (
+                  <View
+                    key={child.id}
+                    style={
+                      idx < visibleChildren.length - 1
+                        ? styles.cardGap
+                        : undefined
                     }
-                  />
-                </View>
-              ))}
-          </View>
-        )}
+                  >
+                    <ChildCard
+                      displayName={child.displayName}
+                      grade={child.grade}
+                      avatarUrl={child.avatarUrl}
+                      isLinked={Boolean(child.isLinked)}
+                      onLink={() =>
+                        openLinkSheetForChild({
+                          id: child.id,
+                          displayName: child.displayName,
+                          avatarUrl: child.avatarUrl,
+                          isLinked: Boolean(child.isLinked),
+                        })
+                      }
+                      onPress={() => {
+                        router.push({
+                          pathname: "/child/stats" as any,
+                          params: {
+                            childId: child.id,
+                            childName: child.displayName,
+                            avatarUrl: child.avatarUrl,
+                          },
+                        });
+                      }}
+                      onRemove={() =>
+                        handleRemovePress({
+                          id: child.id,
+                          displayName: child.displayName,
+                        })
+                      }
+                    />
+                  </View>
+                ))}
+              </StaggeredList>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      {/* Get Code bottom bar */}
-      {hasChildren && (
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            paddingHorizontal: 24,
-            paddingBottom: 36,
-            paddingTop: 16,
-            backgroundColor: "#0D0B14E8",
-            borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.05)",
-          }}
-        >
-          <Button
-            className="min-w-full"
-            onPress={() => selectChildSheetRef.current?.present()}
-            loading={isGeneratingCode}
-            variant="primary"
-            label={t("linkCode.getCode")}
-          />
-        </View>
-      )}
+      {/* Link Guest / Kid bottom bar */}
+      <View style={styles.bottomBar}>
+        <PillButton
+          label={t("linkCode.getCode")}
+          onPress={handleGetCodePress}
+          size="lg"
+        />
+      </View>
 
       {/* Add child bottom sheet */}
       <FloatingBottomSheet
@@ -332,208 +292,354 @@ export default function ChildrenScreen() {
       >
         <FloatingBottomSheetScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 28 }}
+          contentContainerStyle={styles.addSheetScroll}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 16,
-              paddingTop: 4,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: getHeadingFont(),
-                fontSize: 22,
-                color: "#FFFFFF",
-              }}
-            >
+          <View style={styles.addSheetHeader}>
+            <Text style={[styles.addSheetTitle, { fontFamily: getHeadingFont() }]}>
               {t("addNewPlayer")}
             </Text>
-            <Pressable
+            <TouchableOpacity
               onPress={handleCloseSheet}
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                backgroundColor: "#241D2E",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              style={styles.closeBtn}
             >
-              <Text
-                style={{
-                  color: "#B8A9C9",
-                  fontSize: 16,
-                  fontFamily: FONTS.bodyBold,
-                }}
-              >
-                {"\u2715"}
-              </Text>
-            </Pressable>
+              <Ionicons
+                name="close"
+                size={18}
+                color={UI_COLORS.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
 
-          <AddChildForm onSave={handleAdd} onCancel={handleCloseSheet} />
+          <AddChildForm
+            onSave={handleAdd}
+            onCancel={handleCloseSheet}
+            loading={addMutation.isPending}
+          />
         </FloatingBottomSheetScrollView>
       </FloatingBottomSheet>
 
       {/* Remove confirmation bottom sheet */}
       <FloatingBottomSheet ref={confirmSheetRef} enableDynamicSizing>
-        <FloatingBottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 8 }}
-        >
-          <Text
-            style={{
-              color: "#FFFFFF",
-              fontSize: 20,
-              textAlign: "center",
-              marginBottom: 8,
-              fontFamily: getHeadingFont(),
-            }}
-          >
+        <FloatingBottomSheetView style={styles.confirmSheetBody}>
+          <View style={styles.removeIconBall}>
+            <Ionicons
+              name="trash-outline"
+              size={25}
+              color={UI_COLORS.coral}
+            />
+          </View>
+          <Text style={[styles.confirmTitle, { fontFamily: getHeadingFont() }]}>
             {t("remove.title")}
           </Text>
-          <Text
-            style={{
-              color: "#B8A9C9",
-              fontSize: 14,
-              textAlign: "center",
-              marginBottom: 24,
-              fontFamily: FONTS.body,
-            }}
-          >
+          <Text style={styles.confirmMessage}>
             {t("remove.message", { name: removingChild?.displayName })}
           </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <Pressable
-              onPress={handleCancelRemove}
-              style={{
-                flex: 1,
-                paddingVertical: 14,
-                borderRadius: 999,
-                backgroundColor: "#241D2E",
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: "#E5E7EB",
-                  fontSize: 14,
-                  fontFamily: FONTS.bodySemiBold,
-                }}
-              >
-                {t("remove.cancel")}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={handleConfirmRemove}
-              disabled={deleteMutation.isPending}
-              style={{
-                flex: 1,
-                paddingVertical: 14,
-                borderRadius: 999,
-                backgroundColor: "#EF4444",
-                alignItems: "center",
-                opacity: deleteMutation.isPending ? 0.6 : 1,
-              }}
-            >
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  fontSize: 14,
-                  fontFamily: FONTS.bodySemiBold,
-                }}
-              >
-                {deleteMutation.isPending
-                  ? t("remove.removing")
-                  : t("remove.confirm")}
-              </Text>
-            </Pressable>
+          <View style={styles.confirmActions}>
+            <View style={styles.confirmSlot}>
+              <PillButton
+                label={t("remove.cancel")}
+                variant="secondary"
+                size="lg"
+                onPress={handleCancelRemove}
+              />
+            </View>
+            <View style={styles.confirmSlot}>
+              <PillButton
+                label={
+                  deleteMutation.isPending
+                    ? t("remove.removing")
+                    : t("remove.confirm")
+                }
+                size="lg"
+                onPress={handleConfirmRemove}
+                loading={deleteMutation.isPending}
+                style={styles.removeConfirmBtn}
+              />
+            </View>
           </View>
         </FloatingBottomSheetView>
       </FloatingBottomSheet>
 
-      {/* Select child bottom sheet */}
+      {/* Select child or new guest invite bottom sheet */}
       <FloatingBottomSheet ref={selectChildSheetRef} enableDynamicSizing>
-        <FloatingBottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 10 }}
-        >
-          <Text
-            className="text-white text-center text-xl mb-5"
-            style={{ fontFamily: getHeadingFont() }}
-          >
+        <FloatingBottomSheetView style={styles.sheetBody}>
+          <Text style={[styles.sheetHeading, { fontFamily: getHeadingFont() }]}>
             {t("linkCode.selectChild")}
           </Text>
-          <View className="gap-3">
-            {children
-              .filter((c) => c?.displayName)
-              .map((child) => (
-                <ChildCard
-                  key={child.id}
-                  displayName={child.displayName}
-                  grade={child.grade}
-                  avatarUrl={child.avatarUrl}
-                  onPress={() =>
-                    handleSelectChildForCode({
-                      id: child.id,
-                      displayName: child.displayName,
-                    })
-                  }
+          <View style={styles.sheetList}>
+            <TouchableOpacity
+              onPress={() => {
+                hapticsService.selection();
+                selectChildSheetRef.current?.dismiss();
+                linkSheetRef.current?.openFamilyInvite();
+              }}
+              activeOpacity={0.82}
+              style={styles.inviteGuestCard}
+              accessibilityRole="button"
+            >
+              <View style={styles.inviteGuestIcon}>
+                <Ionicons
+                  name="person-add-outline"
+                  size={20}
+                  color={UI_COLORS.mint}
                 />
-              ))}
+              </View>
+              <View style={styles.inviteGuestTextCol}>
+                <Text style={styles.inviteGuestTitle}>
+                  {t("linkCode.inviteGuestTitle")}
+                </Text>
+                <Text style={styles.inviteGuestDesc}>
+                  {t("linkCode.inviteGuestDesc")}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={UI_COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            {visibleChildren.map((child: any) => (
+              <ChildCard
+                key={child.id}
+                displayName={child.displayName}
+                grade={child.grade}
+                avatarUrl={child.avatarUrl}
+                isLinked={Boolean(child.isLinked)}
+                onPress={() =>
+                  openLinkSheetForChild({
+                    id: child.id,
+                    displayName: child.displayName,
+                    avatarUrl: child.avatarUrl,
+                    isLinked: Boolean(child.isLinked),
+                  })
+                }
+              />
+            ))}
           </View>
         </FloatingBottomSheetView>
       </FloatingBottomSheet>
 
-      {/* Code display bottom sheet */}
-      <FloatingBottomSheet ref={codeSheetRef} enableDynamicSizing>
-        <FloatingBottomSheetView
-          style={{ paddingHorizontal: 24, paddingBottom: 24, paddingTop: 10 }}
-        >
-          <Text
-            className="text-white text-center text-xl mb-1"
-            style={{ fontFamily: getHeadingFont() }}
-          >
-            {t("linkCode.title", { name: codeForChildName })}
-          </Text>
-          {codeResult && (
-            <View className="items-center">
-              <Text
-                className="text-center mb-5 font-body text-sm"
-                style={{
-                  color: secondsLeft < 60 ? "#EF4444" : "#7B6B8A",
-                }}
-              >
-                {secondsLeft <= 0
-                  ? t("linkCode.expired")
-                  : secondsLeft < 60
-                    ? t("linkCode.expiresSeconds", { seconds: secondsLeft })
-                    : t("linkCode.expiresMinutes", {
-                        minutes: Math.floor(secondsLeft / 60),
-                        seconds: secondsLeft % 60,
-                      })}
-              </Text>
-              {secondsLeft <= 0 ? (
-                <Button
-                  label={t("linkCode.generateNew")}
-                  onPress={handleRegenerateCode}
-                  loading={isGeneratingCode}
-                  style={{ marginTop: 20, width: "100%" }}
-                />
-              ) : (
-                <QRCodeDisplay
-                  sessionToken={codeResult.code}
-                  status={secondsLeft <= 0 ? "expired" : "waiting"}
-                />
-              )}
-              {secondsLeft > 0 && <SessionCodeDisplay code={codeResult.code} />}
-            </View>
-          )}
-        </FloatingBottomSheetView>
-      </FloatingBottomSheet>
+      {/* Parent Device Link / Unlink Sheet */}
+      <ParentDeviceLinkSheet
+        ref={linkSheetRef}
+        onStatusChange={() => {
+          void queryClient.invalidateQueries({ queryKey: ["children"] });
+        }}
+      />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bg,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  mainColumn: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(232, 93, 117, 0.12)",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(232, 93, 117, 0.28)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    flex: 1,
+    color: "#F2A7B5",
+    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  loaderWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 72,
+  },
+  listShell: {
+    backgroundColor: UI_COLORS.surface,
+    borderRadius: 28,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: UI_COLORS.borderSubtle,
+    padding: 5,
+  },
+  cardGap: {
+    marginBottom: 6,
+  },
+  headerAddPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderRadius: UI_RADII.pill,
+    borderCurve: "continuous",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  headerAddPillBare: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  headerAddText: {
+    color: UI_COLORS.textPrimary,
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+  },
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 34,
+    paddingTop: 14,
+    backgroundColor: "rgba(13, 11, 20, 0.94)",
+    borderTopWidth: 1,
+    borderTopColor: UI_COLORS.borderSubtle,
+  },
+  addSheetScroll: {
+    paddingHorizontal: 22,
+    paddingBottom: 28,
+  },
+  addSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    paddingTop: 4,
+  },
+  addSheetTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    color: UI_COLORS.textPrimary,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: UI_COLORS.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: UI_COLORS.borderSubtle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmSheetBody: {
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingBottom: 24,
+    paddingTop: 8,
+  },
+  removeIconBall: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(232, 93, 117, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  confirmTitle: {
+    color: UI_COLORS.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  confirmMessage: {
+    color: UI_COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    fontFamily: FONTS.body,
+    marginBottom: 24,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 10,
+  },
+  confirmSlot: {
+    flex: 1,
+  },
+  removeConfirmBtn: {
+    backgroundColor: UI_COLORS.coral,
+  },
+  sheetBody: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    paddingTop: 8,
+  },
+  sheetHeading: {
+    color: UI_COLORS.textPrimary,
+    fontSize: 21,
+    lineHeight: 27,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  sheetList: {
+    gap: 8,
+  },
+  inviteGuestCard: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(52, 211, 153, 0.08)",
+    borderRadius: 22,
+    borderCurve: "continuous",
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.24)",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+    marginBottom: 4,
+  },
+  inviteGuestIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(52, 211, 153, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inviteGuestTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  inviteGuestTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 15,
+    color: UI_COLORS.textPrimary,
+  },
+  inviteGuestDesc: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    lineHeight: 16,
+    color: UI_COLORS.textSecondary,
+  },
+});

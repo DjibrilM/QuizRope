@@ -11,7 +11,39 @@
     "avgTime": "平均 {{time}}秒",
     "viewHistory": "查看比赛记录",
     "noData": "暂无比赛",
-    "noDataSubtitle": "参加一些比赛后这里会显示统计数据！"
+    "noDataSubtitle": "参加一些比赛后这里会显示统计数据！",
+    "performanceBadge": {
+      "excellent": "优秀",
+      "good": "稳步进步",
+      "needsWork": "需要练习"
+    },
+    "report": {
+      "title": "学习报告",
+      "strongAt": "擅长科目",
+      "practiceNeeded": "需要更多练习",
+      "practiceHint": "多花些时间练习{{subject}}以提高准确率",
+      "noWeakSubject": "继续加油——多练习能获得更准确的分析！",
+      "avgResponseTime": "平均答题",
+      "avgResponseValue": "每题 {{time}} 秒",
+      "slowNote": "认真思考——好习惯！",
+      "fastNote": "答题既快又自信！",
+      "recentTrend": "近期趋势",
+      "trendImproving": "进步中 (+{{delta}}%)",
+      "trendDipping": "下降 (-{{delta}}%)",
+      "trendSteady": "表现稳定",
+      "trendComparison": "近期比赛：{{recent}}%（{{recentCorrect}}/{{recentTotal}}），此前 {{earlier}}%",
+      "rushedNote": "太快了——请仔细读题！",
+      "quickCheckNote": "较快——注意核对答案",
+      "slowPracticeNote": "复习错题要点",
+      "practiceHintFast": "平均 {{time}} 秒答题，{{total}} 题错 {{missed}} 题——放慢节奏仔细审题。",
+      "practiceHintSlow": "{{total}} 题错 {{missed}} 题（平均 {{time}} 秒）——一起巩固{{subject}}基础步骤。",
+      "practiceHintClose": "{{total}} 题对 {{correct}} 题——快到 75% 了！一起回看错题吧。",
+      "practiceHintSupport": "{{total}} 题错 {{missed}} 题——可先练简单难度或一起查看错题解析。",
+      "missedBadge": "错 {{missed}} 题 · {{accuracy}}%",
+      "allOnTrack": "所有科目均达 70%+ — 稳步进步很棒！",
+      "needMoreMatches": "多答几道题即可解锁科目趋势分析。",
+      "difficultyTitle": "按难度统计"
+    }
   },
   "history": {
     "title": "比赛记录",
@@ -19,7 +51,7 @@
     "lost": "负",
     "accuracy": "准确率 {{accuracy}}%",
     "noMatches": "没有找到比赛",
-    "noMatchesSubtitle": "该选手还没有完成任何比赛。"
+    "noMatchesSubtitle": "这个孩子还没有完成任何比赛。"
   },
   "review": {
     "title": "比赛回顾",

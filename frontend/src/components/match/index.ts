@@ -4,7 +4,12 @@ export {
   type DifficultyOption,
 } from "./DifficultySelector";
 export { RoundsSelector } from "./RoundsSelector";
-export { MatchHistoryCard } from "./MatchHistoryCard";
+export {
+  ChildMatchSummaryCard,
+  HistoryListShell,
+  HistoryMatchRow,
+  MatchHistoryCard,
+} from "./MatchHistoryCard";
 export {
   SubjectIcon,
   IconKids,
